@@ -32,6 +32,8 @@ To build  Spotbit you'll need to use the following tools:
 - Celery
 - CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
 
+All of these Python libraries can be installed via pip. 
+
 ### Derived from…
 
 This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app::
