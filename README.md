@@ -1,6 +1,6 @@
 # Blockchain Commons Spotbit
 
-**Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. 
+**Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service.
 
 ## Additional Information
 
@@ -35,15 +35,9 @@ To build  Spotbit you'll need to use the following tools:
 
 ### Derived from…
 
-This  Spotbit project is either derived from or was inspired by:
+This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app::
 
-- [community/repo-name/](https://github.com/community/repo-name) — Repo that does what, by [developer](https://github.com/developer)  or from  [community](https://community.com).
-
-### Used with…
-
-These are other projects that work with or leverage Spotbit:
-
-- [community/repo-name/](https://github.com/community/repo-name) — Repo that does what, by [developer](https://github.com/developer)  or from  [community](https://community.com).
+- [FullyNoded 2](https://github.com/BlockchainCommons/FullyNoded-2) — The mobile app for managing a BTC node via Tor, by [Fonta1n3](https://github.com/Fonta1n3).
 
 ## Financial Support
 
