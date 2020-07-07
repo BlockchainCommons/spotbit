@@ -63,16 +63,20 @@ def now(currency, exchange):
     return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
 
 # Get data from local storage inside of a certain range.
+# Parameters: 
+#   Currency: the fiat base currency to fetch data for. Should be a three letter currency code in lowercase.
+#   Exchange: the exchange to get data from.
+#   date_start and date_end: date_start is the oldest time value in the range desired. It can be provided as a millisecond timestamp or as a datetime formatted as "YYYY-MM-DDTHH:mm:SS".
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
 def hist(currency, exchange, date_start, date_end):
     db_n = sqlite3.connect(p)
     if (str(date_start)).isdigit():
+        date_s = int(date_start)         
+        date_e = int(date_end) 
+    else:
         date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
         date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
-    else:
-        date_s = (datetime.fromisoformat(date_start.replace("T", " ")))
-        date_e = (datetime.fromisoformat(date_end.replace("T", " ")))
-    statement = "SELECT * FROM {} WHERE datetime > '{}' AND datetime < '{}';".format(exchange, date_s, date_e)
+    statement = "SELECT * FROM {} WHERE timestamp > {} AND timestamp < {};".format(exchange, date_s, date_e)
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
