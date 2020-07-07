@@ -55,11 +55,12 @@ def status():
 def now(currency, exchange):
     db_n = sqlite3.connect(p)
     ticker = "BTC-{}".format(currency.upper())
-    statement = "SELECT *, MAX(timestamp) FROM {} WHERE pair = '{}'".format(exchange, ticker)
+    statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {}) LIMIT 1;".format(exchange, ticker, exchange)
     cursor = db_n.execute(statement)
     res = cursor.fetchone()
     db_n.close()
-    return {'id':res[0], 'timestamp':res[1], 'open':res[2], 'high':res[3], 'low':res[4], 'close':res[5], 'vol':res[6]} 
+    print(res)
+    return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
 
 # Get data from local storage inside of a certain range.
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
