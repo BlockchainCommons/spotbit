@@ -14,7 +14,7 @@ allowedFields = ["pruneDepth", "exchanges", "currencies"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 pruneDepth = 1e5
-exchanges = ["bitmex", "coinbase"]
+exchanges = ["kraken", "coinbase"]
 currencies = ["USD"]
 currency="USD"
 #Database
@@ -39,7 +39,7 @@ def is_supported(exchange):
             return True
         else:
             return False
-    except Exception as e:
+    except Exception:
         return False
 
 # We create a list of all exchanges to do error checking on user input
@@ -52,16 +52,23 @@ def status():
     return "server is running"
 
 # Get the latest price entry in the database.
+# Currency: the three letter base currency desired. Must be a currency you are already collecting data for
+# Exchange: the exchange to query data for from the local database. Must be an exchange you are already caching data for (for now)
 @app.route('/now/<currency>/<exchange>')
 def now(currency, exchange):
     db_n = sqlite3.connect(p)
-    ticker = "BTC-{}".format(currency.upper())
-    statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {}) LIMIT 1;".format(exchange, ticker, exchange)
-    cursor = db_n.execute(statement)
-    res = cursor.fetchone()
+    if exchange in exchanges:
+        ticker = "BTC-{}".format(currency.upper())
+        statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {}) LIMIT 1;".format(exchange, ticker, exchange)
+        cursor = db_n.execute(statement)
+        res = cursor.fetchone()
+        print(res)
+        return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+    else:
+        #make a direct request
+        res = request_single(exchange, currency)
     db_n.close()
-    print(res)
-    return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+    return res
 
 # Get data from local storage inside of a certain range.
 # Parameters: 
@@ -83,40 +90,64 @@ def hist(currency, exchange, date_start, date_end):
     db_n.close()
     return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'close', 'vol'], 'data':res}
 
+
+# Make a single request, without having to loop through all exchanges and currency pairs.
+# This is intended for when the user requests an exchange in /now that is not present in the database.
+# It will probably not be used for /hist because of the length of time getting arbitrary amounts of historical data can be
+def request_single(exchange, currency):
+    if not is_supported(exchange):
+        return None
+    obj = ex_objs[exchange]
+    ticker = "BTC/{}".format(currency.upper())
+    if obj.has['fetchOHLCV']:
+        result = None
+        if exchange == "bitfinex":
+            params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
+            result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+        else:
+            result = obj.fetch_ohlcv(ticker, timeframe='1m')
+    else:
+        result = obj.fetch_ticker(ticker)
+    return {'data': result[-1]}
+
+
 # Make an HTTP GET request to exchanges via the ccxt API
 # TODO: add error checking for if an exchange supports ohlc data. If not, default to regular price data. (done)
 # Loop through all chosen exchanges, check if they are supported, loop through all chosen currencies, for each make request to ohlc endpoint if supported, else price ticker. Write data to local storage.
 # Bitfinex special rule: bitfinex returns candles from the beginning of time, not the most recent. This is a behavior of the API itself and has nothing to do with this code or ccxt. Therefore we must specify the timeframe desired in the optional params field of the function call with a dictionary of available options.
-def request(exchanges,currency,interval):
-    db_n = sqlite3.connect(p)
-    while True:
-        for e in exchanges:
-            if is_supported(e):
-                for curr in currencies:
-                        ticker = "BTC/{}".format(curr)
-                        if ex_objs[e].has['fetchOHLCV']:
-                            candle = None
-                            if e == "bitfinex":
-                                params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
-                                candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
-                                print(candle)
-                            else:
-                                candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
-                            for line in candle:
-                                ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
-                                statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
-                                db_n.execute(statement)
-                                db_n.commit()
-                            print("inserted into {} {} {} times".format(e, curr, len(candle)))
+def request(exchanges,currency,interval,db_n):
+    for e in exchanges:
+        if is_supported(e):
+            for curr in currencies:
+                    ticker = "BTC/{}".format(curr)
+                    if ex_objs[e].has['fetchOHLCV']:
+                        candle = None
+                        if e == "bitfinex":
+                            params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
                         else:
-                            price = ex_objs[e].fetch_ticker(ticker)
-                            ts = datetime.fromtimestamp(price['timestamp'])
-                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
-                            print(statement)
+                            candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                        for line in candle:
+                            ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
+                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
                             db_n.execute(statement)
                             db_n.commit()
-                        time.sleep(interval)
-    db_n.close()
+                        print("inserted into {} {} {} times".format(e, curr, len(candle)))
+                    else:
+                        price = ex_objs[e].fetch_ticker(ticker)
+                        ts = datetime.fromtimestamp(price['timestamp'])
+                        statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
+                        print(statement)
+                        db_n.execute(statement)
+                        db_n.commit()
+                    time.sleep(interval)
+
+# Thread method. Makes requests every interval seconds. 
+# Adding this method here to make request more versatile while maintaining the same behavior
+def request_periodically(exchanges, currency, interval):
+    db_n = sqlite3.connect(p)
+    while True:
+        request(exchanges, currency, interval,db_n)
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -145,10 +176,7 @@ def read_config():
                         print("{} is not supported by ccxt!".format(e))
                     e_formatted = e.replace("\n", "")
                     if e_formatted not in exchanges:
-                        if "\n" in e:
-                            exchanges.append(e_formatted)
-                        else:
-                            exchanges.append(e_formatted)
+                        exchanges.append(e_formatted)
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
@@ -191,7 +219,7 @@ def prune(pruneDepth):
 
 if __name__ == "__main__":
     install() #install will call read_config
-    prices_thread = Thread(target=request, args=(exchanges, currency, 5))
+    prices_thread = Thread(target=request_periodically, args=(exchanges, currency, 5))
     prices_thread.start()
     app.run()
     db.close()
