@@ -17,6 +17,8 @@ pruneDepth = 1e5
 exchanges = ["kraken", "coinbase"]
 currencies = ["USD"]
 currency="USD"
+interval = 5 #time to wait between GET requests to servers, to avoid ratelimits
+keepWeeks = 3 # add this to the config file
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
@@ -207,19 +209,20 @@ def install():
         db.commit()
     db.close()
 
-# drop length - pruneDepth from each table. 
+# Remove every entry older than now-keepWeeks from all tables in the database
 # if there is nothing to prune then nothing will be pruned.
-def prune(pruneDepth):
+def prune(keepWeeks):
     for exchange in exchanges:
+        count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
         cursor = db.execute("SELECT id FROM {}".format(exchange))
-        length = cursor[-1][0]
-        statement = "DELETE FROM {} WHERE id < {};".format(exchange, length-pruneDepth)
+        cutoff = (datetime.now()-timedelta(weeks=keep_weeks)).timestamp()*1000
+        statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
         db.execute(statement)
         db.commit()
 
 if __name__ == "__main__":
     install() #install will call read_config
-    prices_thread = Thread(target=request_periodically, args=(exchanges, currency, 5))
+    prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
     prices_thread.start()
     app.run()
     db.close()
