@@ -13,7 +13,7 @@ from pathlib import Path
 allowedFields = ["pruneDepth", "exchanges", "currencies"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
-pruneDepth = 10000
+pruneDepth = 1e5
 exchanges = ["bitmex", "coinbase"]
 currencies = ["USD"]
 currency="USD"
@@ -66,9 +66,12 @@ def now(currency, exchange):
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
 def hist(currency, exchange, date_start, date_end):
     db_n = sqlite3.connect(p)
-    #TODO add an optional condition so that the user can pass timestamps as well as datetimes
-    date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
-    date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
+    if (str(date_start)).isdigit():
+        date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
+        date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
+    else:
+        date_s = (datetime.fromisoformat(date_start.replace("T", " ")))
+        date_e = (datetime.fromisoformat(date_end.replace("T", " ")))
     statement = "SELECT * FROM {} WHERE datetime > '{}' AND datetime < '{}';".format(exchange, date_s, date_e)
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
