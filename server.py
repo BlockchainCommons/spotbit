@@ -46,6 +46,7 @@ def is_supported(exchange):
 ex_objs = init_supported_exchanges()
 print("created list of {} exchanges".format(len(ex_objs)))
 
+# TODO: create an html page to render here
 @app.route('/status')
 def status():
     return "server is running"
@@ -80,7 +81,7 @@ def hist(currency, exchange, date_start, date_end):
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
-    return {'data':res}
+    return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'close', 'vol'], 'data':res}
 
 # Make an HTTP GET request to exchanges via the ccxt API
 # TODO: add error checking for if an exchange supports ohlc data. If not, default to regular price data. (done)
