@@ -124,7 +124,9 @@ def read_config():
             #split the current line
             setting_line = line.split("=")
             #if there are invalid lines in the file ignore them
-            if setting_line[0] not in allowedFields:
+            if "#" in setting_line[0]:
+                pass #ignore comments
+            elif setting_line[0] not in allowedFields and "#" not in setting_line[0]:
                 print("invalid config setting {}".format(setting_line[0]))
             elif setting_line[0] == "pruneDepth":
                 try:
