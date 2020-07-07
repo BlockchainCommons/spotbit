@@ -37,9 +37,21 @@ All of these Python libraries can be installed via pip.
 ### Motivation
 Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
 
+### Usage
+Running Spotbit will create a webserver running at localhost:5000 by default. At first run, Spotbit will read the configuration file at ~/.spotbit/spotbit.config and load settings into memory. Then, it will create a database and the appropriate tables inside of it. 
+Spotbit currently comes with three API endpoints: `now`, `hist` and `status`.
+* `now/<currency>/<exchange>`:
+    - Get the current price information for the specified fiat base currency and exchange
+    - If the exchange requested is not already in the config file, then Spotbit will fetch the requested data directly from the exchange.
+*  `hist/<currency>/<exchange>/<date_start>/<date_end>`:
+    - Get all locally stored price information between `date_start` and `date_end`. These dates can either be datetimes in the format (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
+*  `status`:
+    - Return the status of the server.
+These routes are accessed via http GET. You can use the http libraries included with most programming languages, cURL, or a web browser by navigating to `localhost:5000/route` if the server is running locally.
+
 ### Derived from…
 
-This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app:
+This  Spotbit project is inspired by the need of Fully Noded 2 to display realtime price info in-app:
 
 - [FullyNoded 2](https://github.com/BlockchainCommons/FullyNoded-2) — The mobile app for managing a BTC node via Tor, by [Fonta1n3](https://github.com/Fonta1n3).
 
