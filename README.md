@@ -26,12 +26,11 @@ This table below also establishes provenance (repository of origin, permalink, a
 
 To build  Spotbit you'll need to use the following tools:
 
-- autotools - Gnu Build System from Free Software Foundation ([intro](https://www.gnu.org/software/automake/manual/html_node/Autotools-Introduction.html)).
-- Python3.8
+- Python3.8 or higher
 - Pip
 - Flask
 - Celery
-- CCXT ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
+- CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
 
 ### Derived from…
 
