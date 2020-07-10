@@ -10,6 +10,21 @@
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
+### Installation and Usage
+Spotbit is still under development, but it is currently working in a very limited sense. If you want to install it, first clone the development github branch. Then, install the required libraries via `pip install <LIBRARY>`. The code works on Linux (tested on Ubuntu 18.04), probably works on Mac, and is not currently supported on Windows. Finally, create a directory called `.spotbit` in your home folder. Copy `spotbit.config` to this directory from the Documentation branch. 
+
+To run the server, run `python3.8 server.py`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
+    * `/status`
+        - Returns a string message if the server is running
+    * `/now/<currency>/<exchange>`
+        - Returns the latest candle for BTC/currency (if supported by the exchange API), or the latest spot price. 
+        - currency is a three letter fiat currency (e.g. USD, JPY, etc)
+        - exchange is the name of an exchange supported by CCXT. If the exchange is already in the config file, then the newest row from your local database is returned. If the exchange is not supported, then Spotbit will directly request this exchange and return data but it will not be stored locally.
+    * `/hist/<currency>/<exchange>/<date_start>/<date_end>`
+        - Returns all data in the specified BTC/currency pair between `date_start` and `date_end`.
+        - Dates can be passed either as ISO-8601 dates (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
+        - If the exchange is not present in your config file, then no data is returned.
+
 ## Origin, Authors, Copyright & Licenses
 
 Unless otherwise noted (either in this [/README.md](./README.md) or in the file's header comments) the contents of this repository are Copyright © 2020 by Blockchain Commons, LLC, and are [licensed](./LICENSE) under the [spdx:BSD-2-Clause Plus Patent License](https://spdx.org/licenses/BSD-2-Clause-Patent.html).
@@ -36,18 +51,6 @@ All of these Python libraries can be installed via pip.
 
 ### Motivation
 Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
-
-### Usage
-Running Spotbit will create a webserver running at localhost:5000 by default. At first run, Spotbit will read the configuration file at ~/.spotbit/spotbit.config and load settings into memory. Then, it will create a database and the appropriate tables inside of it. 
-Spotbit currently comes with three API endpoints: `now`, `hist` and `status`.
-* `now/<currency>/<exchange>`:
-    - Get the current price information for the specified fiat base currency and exchange
-    - If the exchange requested is not already in the config file, then Spotbit will fetch the requested data directly from the exchange.
-*  `hist/<currency>/<exchange>/<date_start>/<date_end>`:
-    - Get all locally stored price information between `date_start` and `date_end`. These dates can either be datetimes in the format (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
-*  `status`:
-    - Return the status of the server.
-These routes are accessed via http GET. You can use the http libraries included with most programming languages, cURL, or a web browser by navigating to `localhost:5000/route` if the server is running locally.
 
 ### Derived from…
 
