@@ -23,9 +23,10 @@ keepWeeks = 3 # add this to the config file
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
+SHOULD_REQUEST = True
 app = Flask(__name__)
 # celery config:
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0' #could zeromq be used here? zmq is also used by bitcoin core
 app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
@@ -151,12 +152,14 @@ def request(exchanges,currency,interval,db_n):
                         db_n.execute(statement)
                         db_n.commit()
                     time.sleep(interval)
+    return True #need a return value for celery tasks I believe. This will also help error checking in the future
 
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
+@celery.task
 def request_periodically(exchanges, currency, interval):
     db_n = sqlite3.connect(p)
-    while True:
+    while SHOULD_REQUEST: #want to use this a flag for when this method runs inside of a celery task
         request(exchanges, currency, interval,db_n)
 
 # Read the values stored in the config file and store them in memory.
