@@ -215,7 +215,7 @@ def prune(keepWeeks):
     for exchange in exchanges:
         count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
         cursor = db.execute("SELECT id FROM {}".format(exchange))
-        cutoff = (datetime.now()-timedelta(weeks=keep_weeks)).timestamp()*1000
+        cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
         statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
         db.execute(statement)
         db.commit()
