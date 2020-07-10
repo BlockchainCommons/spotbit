@@ -23,7 +23,7 @@ keepWeeks = 3 # add this to the config file
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
-SHOULD_REQUEST = True
+SHOULD_REQUEST = True #TODO: Update these inside the state of the celery object itself.
 SHOULD_PRUNE = True
 LAST_REQUEST = ""
 LAST_PRUNE = ""
