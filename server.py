@@ -10,10 +10,9 @@ from threading import Thread
 from pathlib import Path 
 
 #Config Settings
-allowedFields = ["pruneDepth", "exchanges", "currencies"]
+allowedFields = ["keepWeeks", "exchanges", "currencies"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
-pruneDepth = 1e5
 exchanges = ["kraken", "coinbase"]
 currencies = ["USD"]
 currency="USD"
@@ -169,11 +168,11 @@ def read_config():
                 pass #ignore comments
             elif setting_line[0] not in allowedFields and "#" not in setting_line[0]:
                 print("invalid config setting {}".format(setting_line[0]))
-            elif setting_line[0] == "pruneDepth":
+            elif setting_line[0] == "keepWeeks":
                 try:
-                    pruneDepth = int(setting_line[1])
+                    keepWeeks = int(setting_line[1])
                 except Exception as e:
-                    print("could not read pruneDepth field. Using default setting. Error: {}".format(e))
+                    print("could not read keepWeeks field. Using default setting of {} weeks. Error: {}".format(e, keepWeeks))
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
                 for e in exs:
