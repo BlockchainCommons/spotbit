@@ -25,6 +25,8 @@ db = sqlite3.connect(p)
 print("db opened in {}".format(p))
 SHOULD_REQUEST = True
 SHOULD_PRUNE = True
+LAST_REQUEST = ""
+LAST_PRUNE = ""
 app = Flask(__name__)
 # celery config:
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0' #could zeromq be used here? zmq is also used by bitcoin core
@@ -62,7 +64,7 @@ print("created list of {} exchanges".format(len(ex_objs)))
 # TODO: create an html page to render here
 @app.route('/status')
 def status():
-    return "server is running"
+    return "<h1>Server Status:</h1><h2>Last Request:</h2><br><p>{}</p><h2>Last Prune:</h2><br><p>{}</p>".format(LAST_REQUEST, LAST_PRUNE)
 
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
@@ -143,6 +145,7 @@ def request(exchanges,currency,interval,db_n):
                         for line in candle:
                             ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
                             statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
+                            LAST_REQUEST = statement
                             db_n.execute(statement)
                             db_n.commit()
                         print("inserted into {} {} {} times".format(e, curr, len(candle)))
@@ -150,6 +153,7 @@ def request(exchanges,currency,interval,db_n):
                         price = ex_objs[e].fetch_ticker(ticker)
                         ts = datetime.fromtimestamp(price['timestamp'])
                         statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
+                        LAST_REQUEST = statement
                         print(statement)
                         db_n.execute(statement)
                         db_n.commit()
@@ -224,12 +228,14 @@ def install():
 
 # Remove every entry older than now-keepWeeks from all tables in the database
 # if there is nothing to prune then nothing will be pruned.
+@celery.task(name='tasks.prune-routine')
 def prune(keepWeeks):
     while SHOULD_PRUNE:
         for exchange in exchanges:
             #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
             cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
             statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
+            LAST_PRUNE = statement
             db.execute(statement)
             db.commit()
         # we want to keep regularly checking the size of the database and prune when needed.
@@ -240,6 +246,7 @@ if __name__ == "__main__":
     #prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
     #prices_thread.start()
     requestTask = request_periodically.apply_async(args=[])
+    pruneTask = prune.apply_async(args=[], countdown=600) #we don't need to start checking for prunes for a while
     app.run()
     db.close()
 
