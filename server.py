@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+from celery import Celery
 import json
 import time
 from  datetime import datetime, timedelta
@@ -23,6 +24,11 @@ p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
 app = Flask(__name__)
+# celery config:
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # Create a dict that contains ccxt objects for every supported exchange. 
 # The API will query a subset of these exchanges based on what the user has specified
