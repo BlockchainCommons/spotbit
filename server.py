@@ -24,12 +24,14 @@ p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
 SHOULD_REQUEST = True
+SHOULD_PRUNE = True
 app = Flask(__name__)
 # celery config:
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0' #could zeromq be used here? zmq is also used by bitcoin core
 app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
+celery.conf.update(enable_utc=True) #probably better to do this
 
 # Create a dict that contains ccxt objects for every supported exchange. 
 # The API will query a subset of these exchanges based on what the user has specified
@@ -156,7 +158,7 @@ def request(exchanges,currency,interval,db_n):
 
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
-@celery.task
+@celery.task(name='tasks.request-routine')
 def request_periodically(exchanges, currency, interval):
     db_n = sqlite3.connect(p)
     while SHOULD_REQUEST: #want to use this a flag for when this method runs inside of a celery task
@@ -223,17 +225,21 @@ def install():
 # Remove every entry older than now-keepWeeks from all tables in the database
 # if there is nothing to prune then nothing will be pruned.
 def prune(keepWeeks):
-    for exchange in exchanges:
-        #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
-        cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
-        statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
-        db.execute(statement)
-        db.commit()
+    while SHOULD_PRUNE:
+        for exchange in exchanges:
+            #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
+            cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
+            statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
+            db.execute(statement)
+            db.commit()
+        # we want to keep regularly checking the size of the database and prune when needed.
+        time.sleep(10000)
 
 if __name__ == "__main__":
     install() #install will call read_config
-    prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
-    prices_thread.start()
+    #prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
+    #prices_thread.start()
+    requestTask = request_periodically.apply_async(args=[])
     app.run()
     db.close()
 
