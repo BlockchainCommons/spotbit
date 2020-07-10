@@ -30,10 +30,12 @@ LAST_PRUNE = ""
 app = Flask(__name__)
 # celery config:
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0' #could zeromq be used here? zmq is also used by bitcoin core
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['result_backend'] = 'redis://localhost:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 celery.conf.update(enable_utc=True) #probably better to do this
+requestId = None
+pruneId = None
 
 # Create a dict that contains ccxt objects for every supported exchange. 
 # The API will query a subset of these exchanges based on what the user has specified
@@ -64,7 +66,8 @@ print("created list of {} exchanges".format(len(ex_objs)))
 # TODO: create an html page to render here
 @app.route('/status')
 def status():
-    return "<h1>Server Status:</h1><h2>Last Request:</h2><br><p>{}</p><h2>Last Prune:</h2><br><p>{}</p>".format(LAST_REQUEST, LAST_PRUNE)
+    print(requestTask)
+    return "<h1>Server Status:</h1><h2>Last Request:</h2><br><p>{}</p><h2>Last Prune:</h2><br><p>{}</p>".format(requestTask.info, pruneTask.state)
 
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
@@ -158,15 +161,18 @@ def request(exchanges,currency,interval,db_n):
                         db_n.execute(statement)
                         db_n.commit()
                     time.sleep(interval)
-    return True #need a return value for celery tasks I believe. This will also help error checking in the future
+    return statement #need a return value for celery tasks I believe. This will also help error checking in the future
 
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
-@celery.task(name='tasks.request-routine')
-def request_periodically(exchanges, currency, interval):
+@celery.task(bind=True)
+def request_periodically(self, exchanges, currency, interval):
     db_n = sqlite3.connect(p)
+    self.update_state(state='STARTED', meta={'statement':'waiting'})
     while SHOULD_REQUEST: #want to use this a flag for when this method runs inside of a celery task
-        request(exchanges, currency, interval,db_n)
+        statement = request(exchanges, currency, interval,db_n)
+        print(statement)
+        self.update_state(state='LAST_REQUEST', meta={'statement':statement})
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -209,7 +215,7 @@ def read_config():
             else:
                 return
     #print statement for debugging
-    print("Settings read:\n pruneDepth: {}\n exchanges: {}\n currencies: {}".format(pruneDepth, exchanges, currencies))
+    print("Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}".format(keepWeeks, exchanges, currencies))
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
@@ -228,8 +234,8 @@ def install():
 
 # Remove every entry older than now-keepWeeks from all tables in the database
 # if there is nothing to prune then nothing will be pruned.
-@celery.task(name='tasks.prune-routine')
-def prune(keepWeeks):
+@celery.task(name='tasks.prune-routine', bind=True)
+def prune(self, keepWeeks):
     while SHOULD_PRUNE:
         for exchange in exchanges:
             #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
@@ -241,12 +247,17 @@ def prune(keepWeeks):
         # we want to keep regularly checking the size of the database and prune when needed.
         time.sleep(10000)
 
+# We need to start the celery tasks before main so that there are global variables for them in the API routes
+
 if __name__ == "__main__":
     install() #install will call read_config
     #prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
     #prices_thread.start()
-    requestTask = request_periodically.apply_async(args=[])
-    pruneTask = prune.apply_async(args=[], countdown=600) #we don't need to start checking for prunes for a while
+    #requestTask = request_periodically.apply_async(args=[exchanges, currency, interval])
+    requestTask = request_periodically.delay(exchanges, currency, interval)
+    pruneTask = prune.apply_async(args=[keepWeeks], countdown=600) #we don't need to start checking for prunes for a while
+    requestId = requestTask.id
+    pruneId = pruneTask.id
     app.run()
     db.close()
 
