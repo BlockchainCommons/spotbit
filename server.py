@@ -28,6 +28,9 @@ app = Flask(__name__)
 # Create a dict that contains ccxt objects for every supported exchange. 
 # The API will query a subset of these exchanges based on what the user has specified
 # Unsupported exchanges: bitvaro phemex
+# Future Plans:
+# Hard coding supported exchanges is a bad practice. CCXT autogenerates code for each exchange and therefore at least in theory may frequently support new exchanges.
+# Need to find a way to automatically create a list of exchange objects. 
 def init_supported_exchanges():
     objects = {"acx":ccxt.acx(), "anxpro":ccxt.anxpro(), "aofex":ccxt.aofex(), "bcex":ccxt.bcex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bit2c":ccxt.bit2c(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmart":ccxt.bitmart(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeim":ccxt.btctradeim(), "btctradeua":ccxt.btctradeua(), "btcturk":ccxt.btcturk(), "buda":ccxt.buda(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coingi":ccxt.coingi(), "coinmarketcap":ccxt.coinmarketcap(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "coinspot":ccxt.coinspot(), "coolcoin":ccxt.coolcoin(), "coss":ccxt.coss(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "deribit":ccxt.deribit(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "fcoin":ccxt.fcoin(), "fcoinjp":ccxt.fcoinjp, "flowbtc":ccxt.flowbtc(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "fybse":ccxt.fybse(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "idex":ccxt.idex(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "kuna":ccxt.kuna(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "mixcoins":ccxt.mixcoins(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "qtrade":ccxt.qtrade(), "rightbtc":ccxt.rightbtc(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "stronghold":ccxt.stronghold(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vaultoro":ccxt.vaultoro(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "xbtce":ccxt.xbtce(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
     return objects
@@ -213,8 +216,7 @@ def install():
 # if there is nothing to prune then nothing will be pruned.
 def prune(keepWeeks):
     for exchange in exchanges:
-        count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
-        cursor = db.execute("SELECT id FROM {}".format(exchange))
+        #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
         cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
         statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
         db.execute(statement)
