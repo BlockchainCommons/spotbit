@@ -1,4 +1,5 @@
-from flask import Flask, render_template
+from flask import Flask, request as flaskRequest, jsonify, render_template
+import requests
 import json
 import time
 from  datetime import datetime, timedelta
@@ -61,14 +62,18 @@ def status():
 # TODO: make the updates persistant by also writing them to file.
 @app.route('/configure', methods=['GET', 'POST'])
 def configure():
-    if request.method == 'GET':
+    global keepWeeks
+    global currencies
+    global exchanges
+    global interval
+    if flaskRequest.method == 'POST':
         #return the config settings
-        return {'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
-    else:
-        keepWeeks = request.json("keepWeeks")
-        exchanges = request.json("exchanges")
-        currencies = request.json("currencies")
+        keepWeeks = flaskRequest.json("keepWeeks")
+        exchanges = flaskRequest.json("exchanges")
+        currencies = flaskRequest.json("currencies")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+    else:
+        return {'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
         
 
 # Get the latest price entry in the database.
@@ -212,7 +217,7 @@ def read_config():
             else:
                 return
     #print statement for debugging
-    print("Settings read:\n pruneDepth: {}\n exchanges: {}\n currencies: {}".format(keepWeeks, exchanges, currencies))
+    print("Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}".format(keepWeeks, exchanges, currencies))
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
