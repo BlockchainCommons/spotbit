@@ -102,7 +102,7 @@ def hist(currency, exchange, date_start, date_end):
 # It will probably not be used for /hist because of the length of time getting arbitrary amounts of historical data can be
 def request_single(exchange, currency):
     if not is_supported(exchange):
-        return None
+        return "{} is not supported by CCXT".format(exchange)
     obj = ex_objs[exchange]
     ticker = "BTC/{}".format(currency.upper())
     if obj.has['fetchOHLCV']:
@@ -196,7 +196,7 @@ def read_config():
             else:
                 return
     #print statement for debugging
-    print("Settings read:\n pruneDepth: {}\n exchanges: {}\n currencies: {}".format(pruneDepth, exchanges, currencies))
+    print("Settings read:\n pruneDepth: {}\n exchanges: {}\n currencies: {}".format(keepWeeks, exchanges, currencies))
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
