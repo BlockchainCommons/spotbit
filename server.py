@@ -66,7 +66,6 @@ def now(currency, exchange):
         statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {}) LIMIT 1;".format(exchange, ticker, exchange)
         cursor = db_n.execute(statement)
         res = cursor.fetchone()
-        print(res)
         return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
     else:
         #make a direct request
@@ -86,8 +85,11 @@ def hist(currency, exchange, date_start, date_end):
         date_s = int(date_start)         
         date_e = int(date_end) 
     else:
-        date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
-        date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
+        try:
+            date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
+            date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
+        except Exception:
+            return "malformed dates. Use YYYY-MM-DDTHH:mm:SS or millisecond timestamps. Provide both dates in the same format"
     statement = "SELECT * FROM {} WHERE timestamp > {} AND timestamp < {};".format(exchange, date_s, date_e)
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
