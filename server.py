@@ -55,6 +55,22 @@ print("created list of {} exchanges".format(len(ex_objs)))
 def status():
     return "server is running"
 
+# configure the settings of Spotbit while the server is still running
+# send a GET request to this route to view current settings
+# send a POST request to this route with settings fields stored in JSON to update settings
+# TODO: make the updates persistant by also writing them to file.
+@app.route('/configure', methods=['GET', 'POST'])
+def configure():
+    if request.method == 'GET':
+        #return the config settings
+        return {'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+    else:
+        keepWeeks = request.json("keepWeeks")
+        exchanges = request.json("exchanges")
+        currencies = request.json("currencies")
+        return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+        
+
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
 # Exchange: the exchange to query data for from the local database. Must be an exchange you are already caching data for (for now)
