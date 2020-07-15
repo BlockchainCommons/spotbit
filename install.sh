@@ -15,6 +15,7 @@ then
 fi
 
 # install python dependencies
+# need to force python3.8 as well
 pip install -r requirements.txt
 
 ################################################################################################################################
@@ -36,6 +37,7 @@ DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 #sudo apt update
 #sudo apt install tor deb.torproject.org-keyring
 ################################################################################################################################
+# TODO support btc standup by not wiping out that config if it is already there, use an if statement (the lmsith version)
 mkdir /var/lib/tor/Spotbit
 echo '# setup for Spotbit service' >> /etc/tor/torrc
 echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
