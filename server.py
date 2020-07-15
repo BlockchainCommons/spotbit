@@ -67,7 +67,7 @@ def configure():
     global exchanges
     global interval
     if flaskRequest.method == 'POST':
-        #return the config settings
+        #return the config settings TODO: error check so that the user doesn't have to submit everything at once. Also implement a form here.
         keepWeeks = flaskRequest.json("keepWeeks")
         exchanges = flaskRequest.json("exchanges")
         currencies = flaskRequest.json("currencies")
