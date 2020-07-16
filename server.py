@@ -36,7 +36,7 @@ def init_supported_exchanges():
     return objects
 
 # Check if a given exchange is in the list of supported exchanges.
-# Currently, the list of supported exchanges is all those supported by ccxt aside from a small handful.
+# Currently, the list of supported exchanges is all those supported by ccxt aside from a small handful that did not seem to work properly. May be bug in ccxt or just a typo in their code / docs
 def is_supported(exchange):
     try:
         obj = ex_objs[exchange]
@@ -62,6 +62,7 @@ def status():
 # TODO: make the updates persistant by also writing them to file.
 @app.route('/configure', methods=['GET', 'POST'])
 def configure():
+    # seems like this needs to be done in order to reference global vars inside of the flask server thread
     global keepWeeks
     global currencies
     global exchanges
@@ -225,7 +226,7 @@ def read_config():
 def install():
     read_config()
     #create the sqlite db
-    print("creating tables for {} exchanges.".format(len(exchanges)))
+    print("creating tables for {} exchanges if they do not exist already.".format(len(exchanges)))
     for exchange in exchanges:
         #change this to f-strings
         sql = "CREATE TABLE IF NOT EXISTS {} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER, datetime TEXT, pair TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL)".format(exchange)
