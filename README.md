@@ -11,7 +11,17 @@
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
 ### Installation and Usage
+#### Fully Manual Install
 Spotbit is still under development, but it is currently working in a very limited sense. If you want to install it, first clone the development github branch. Then, install the required libraries via `pip install <LIBRARY>`. The code works on Linux (tested on Ubuntu 18.04), probably works on Mac, and is not currently supported on Windows. Finally, create a directory called `.spotbit` in your home folder. Copy `spotbit.config` to this directory from the Documentation branch. 
+
+#### Script Install
+The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. The script must be run as root; it will exit if the current user does not run it with `sudo`. 
+
+`install.sh` will do three things: create the ~/.spotbit directory in the user's home folder, copy the default config into the file ~/.spotbit/spotbit.config, download and install Tor, then create a Spotbit hidden service, then install the dependencies listed in `requirements.txt` via pip. 
+
+You need the following for the script to run properly: python version 3.8 or higher and a properly configured pip alias. If python3.8 is the only version of python on your system, then this is already done. However, on systems with multiple versions of python the command `pip` likely is mapped to a different version of python. You may need to add an alias that sets pip3 or pip3.8 (depending on the system) to pip in your bashrc.
+
+The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
 
 To run the server, run `python3.8 server.py`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
     * `/status`
