@@ -49,9 +49,13 @@ systemctl restart tor.service
 
 ################################################################################################################################
 # Copy the default config to file
-mkdir ~/.spotbit
-touch ~/.spotbit/spotbit.config
-cat spotbit_example.config >> ~/.spotbit/spotbit.config
+if test -f "~/.spotbit/spotbit.config"; then
+  echo "configs already configured"
+else
+  mkdir ~/.spotbit
+  touch ~/.spotbit/spotbit.config
+  cat spotbit_example.config >> ~/.spotbit/spotbit.config
+fi
 
 # show the URL of the hidden service
 echo "hidden service onion address (located at /var/lib/tor/Spotbit):"
