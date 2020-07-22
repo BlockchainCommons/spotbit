@@ -17,7 +17,7 @@ configPath = Path("~/.spotbit/spotbit.config").expanduser()
 exchanges = ["kraken", "coinbase"]
 currencies = ["USD"]
 currency="USD"
-interval = 5 #time to wait between GET requests to servers, to avoid ratelimits
+interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
@@ -131,11 +131,20 @@ def request_single(exchange, currency):
         result = None
         if exchange == "bitfinex":
             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
-            result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+            try:
+                result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+            except Exception as e:
+                print("got ratelimited on {}".format(exchange))
         else:
-            result = obj.fetch_ohlcv(ticker, timeframe='1m')
+            try:
+                result = obj.fetch_ohlcv(ticker, timeframe='1m')
+            except Exception as e:
+                print("got ratelimited on {}".format(e))
     else:
-        result = obj.fetch_ticker(ticker)
+        try:
+            result = obj.fetch_ticker(ticker)
+        except Exception as e:
+            print("got ratelimited on {}".format(e))
     return {'data': result[-1]}
 
 
@@ -152,9 +161,16 @@ def request(exchanges,currency,interval,db_n):
                         candle = None
                         if e == "bitfinex":
                             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
-                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                            try:
+                                candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                            except Exception as e: #figure out this error type
+                                #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
+                                print("got ratelimited on {}".format(e))
                         else:
-                            candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            try:
+                                candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            except Exception as e:
+                                print("got ratelimited on {}".format(e))
                         for line in candle:
                             ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
                             statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
@@ -162,7 +178,10 @@ def request(exchanges,currency,interval,db_n):
                             db_n.commit()
                         print("inserted into {} {} {} times".format(e, curr, len(candle)))
                     else:
-                        price = ex_objs[e].fetch_ticker(ticker)
+                        try:
+                            price = ex_objs[e].fetch_ticker(ticker)
+                        except Exception as e:
+                            print("got ratelimited on {}".format(e))
                         ts = datetime.fromtimestamp(price['timestamp'])
                         statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
                         print(statement)
