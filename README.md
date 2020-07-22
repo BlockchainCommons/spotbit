@@ -1,6 +1,7 @@
 # Blockchain Commons Spotbit
 
 **Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service.
+.
 
 ## Additional Information
 
