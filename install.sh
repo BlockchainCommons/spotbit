@@ -39,13 +39,18 @@ DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 ################################################################################################################################
 # TODO support btc standup by not wiping out that config if it is already there, use an if statement (the lmsith version)
 mkdir /var/lib/tor/Spotbit
+chown -R debian-tor:debian-tor /var/lib/tor/Spotbit
+chmod 700 /var/lib/tor/Spotbit
 echo '# setup for Spotbit service' >> /etc/tor/torrc
 echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
 echo 'HiddenServicePort 80 127.0.0.1:5000' >> /etc/tor/torrc
+echo 'HiddenServiceVersion 3' >> /etc/tor/torrc
 
 # start the tor service after we're done
 echo "starting tor"
-systemctl restart tor.service
+systemctl daemon-reload
+service tor stop
+service tor start
 
 ################################################################################################################################
 # Copy the default config to file
@@ -58,6 +63,8 @@ else
 fi
 
 # show the URL of the hidden service
+echo "waiting 2 minutes for tor to finish bootstrapping."
+sleep 2m
 echo "hidden service onion address (located at /var/lib/tor/Spotbit):"
 cat /var/lib/tor/Spotbit/hostname
 
