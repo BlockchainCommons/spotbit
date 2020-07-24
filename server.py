@@ -14,7 +14,7 @@ from pathlib import Path
 allowedFields = ["keepWeeks", "exchanges", "currencies"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
-exchanges = ["kraken", "coinbase"]
+exchanges = []
 currencies = ["USD"]
 currency="USD"
 interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
@@ -162,36 +162,42 @@ def request(exchanges,currency,interval,db_n):
         if is_supported(e):
             for curr in currencies:
                     ticker = "BTC/{}".format(curr)
+                    success = True
                     if ex_objs[e].has['fetchOHLCV']:
                         candle = None
                         if e == "bitfinex":
                             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                             try:
                                 candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
-                            except Exception as e: #figure out this error type
+                            except Exception as err: #figure out this error type
                                 #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
-                                print("got ratelimited on {}".format(e))
+                                print("error (fetching candle (bitfinex)): {}".format(err))
+                                success = False
                         else:
                             try:
                                 candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
-                            except Exception as e:
-                                print("got ratelimited on {}".format(e))
-                        for line in candle:
-                            ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
-                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
-                            db_n.execute(statement)
-                            db_n.commit()
-                        print("inserted into {} {} {} times".format(e, curr, len(candle)))
+                            except Exception as err:
+                                print("error (fetching candle): {}".format(err))
+                                success = False
+                        if success:
+                            for line in candle:
+                                ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
+                                statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
+                                db_n.execute(statement)
+                                db_n.commit()
+                            print("inserted into {} {} {} times".format(e, curr, len(candle)))
                     else:
                         try:
                             price = ex_objs[e].fetch_ticker(ticker)
-                        except Exception as e:
-                            print("got ratelimited on {}".format(e))
-                        ts = datetime.fromtimestamp(price['timestamp'])
-                        statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
-                        print(statement)
-                        db_n.execute(statement)
-                        db_n.commit()
+                        except Exception as err:
+                            print("error (fetching ticker): {}".format(err))
+                            success = False
+                        if success:
+                            ts = datetime.fromtimestamp(price['timestamp'])
+                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
+                            print(statement)
+                            db_n.execute(statement)
+                            db_n.commit()
                     time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
@@ -225,7 +231,7 @@ def read_config():
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
                 for e in exs:
-                    if e == "all":
+                    if e.replace("\n", "") == "all":
                         exchanges = list(ex_objs.keys())
                         break
                     if is_supported(e) == False:
