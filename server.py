@@ -205,6 +205,7 @@ def request_periodically(exchanges, currency, interval):
 # Run during install and at every run of the server.
 # Returns void
 def read_config():
+    global exchanges
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
