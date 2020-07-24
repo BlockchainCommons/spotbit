@@ -1,9 +1,10 @@
 # Created by https://www.gitignore.io/api/macos
 
-### Config files, database files###
+### Config files, database files, logs###
 .config
 .conf
 .db
+.log
 
 ### macOS ###
 # General
