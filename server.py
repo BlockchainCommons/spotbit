@@ -224,16 +224,15 @@ def read_config():
                     print("could not read keepWeeks field. Using default setting of {} weeks. Error: {}".format(e, keepWeeks))
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
-                #check for the keyword 'all' - in this case just use every ccxt exchange available.
-                if exs[0] == "all":
-                    exchanges = list(ex_objs.keys())
-                else:
-                    for e in exs:
-                        if is_supported(e) == False:
-                            print("{} is not supported by ccxt!".format(e))
-                        e_formatted = e.replace("\n", "")
-                        if e_formatted not in exchanges:
-                            exchanges.append(e_formatted)
+                for e in exs:
+                    if e == "all":
+                        exchanges = list(ex_objs.keys())
+                        break
+                    if is_supported(e) == False:
+                        print("{} is not supported by ccxt!".format(e))
+                    e_formatted = e.replace("\n", "")
+                    if e_formatted not in exchanges:
+                        exchanges.append(e_formatted)
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
