@@ -257,17 +257,22 @@ def install():
 # Remove every entry older than now-keepWeeks from all tables in the database
 # if there is nothing to prune then nothing will be pruned.
 def prune(keepWeeks):
-    for exchange in exchanges:
-        #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
-        cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
-        statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
-        db.execute(statement)
-        db.commit()
+    while True:
+        for exchange in exchanges:
+            #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
+            cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
+            statement = "DELETE FROM {} WHERE timestamp < {};".format(exchange, cutoff)
+            db.execute(statement)
+            db.commit()
+        time.sleep(60000)
+    
 
 if __name__ == "__main__":
     install() #install will call read_config
     prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
+    pruning_thread = Thread(target=prune, args=(keepWeeks))
     prices_thread.start()
+    pruning_thread.start()
     app.run()
     db.close()
 
