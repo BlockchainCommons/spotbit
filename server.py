@@ -73,6 +73,7 @@ def configure():
         keepWeeks = flaskRequest.json("keepWeeks")
         exchanges = flaskRequest.json("exchanges")
         currencies = flaskRequest.json("currencies")
+        interval = flaskRequest.json("interval")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
         return {'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
