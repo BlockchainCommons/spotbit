@@ -1,6 +1,6 @@
 # Blockchain Commons Spotbit
 
-**Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service.
+**Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service. Spotbit can be easily used with Tor and served as a hidden service.
 
 ## Additional Information
 
@@ -9,6 +9,31 @@
 ## Status - Late Alpha
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
+
+### Installation and Usage
+#### Fully Manual Install
+Spotbit is still under development, but it is currently working in a very limited sense. If you want to install it, first clone the development github branch. Then, install the required libraries via `pip install <LIBRARY>`. The code works on Linux (tested on Ubuntu 18.04), probably works on Mac, and is not currently supported on Windows. Finally, create a directory called `.spotbit` in your home folder. Copy `spotbit.config` to this directory from the Documentation branch. 
+
+#### Script Install
+The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. The script must be run as root; it will exit if the current user does not run it with `sudo`. 
+
+`install.sh` will do three things: create the ~/.spotbit directory in the user's home folder, copy the default config into the file ~/.spotbit/spotbit.config, download and install Tor, then create a Spotbit hidden service, then install the dependencies listed in `requirements.txt` via pip. 
+
+You need the following for the script to run properly: python version 3.8 or higher and a properly configured pip alias. If python3.8 is the only version of python on your system, then this is already done. However, on systems with multiple versions of python the command `pip` likely is mapped to a different version of python. You may need to add an alias that sets pip3 or pip3.8 (depending on the system) to pip in your bashrc.
+
+The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
+
+To run the server, run `python3.8 server.py`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
+    * `/status`
+        - Returns a string message if the server is running
+    * `/now/<currency>/<exchange>`
+        - Returns the latest candle for BTC/currency (if supported by the exchange API), or the latest spot price. 
+        - currency is a three letter fiat currency (e.g. USD, JPY, etc)
+        - exchange is the name of an exchange supported by CCXT. If the exchange is already in the config file, then the newest row from your local database is returned. If the exchange is not supported, then Spotbit will directly request this exchange and return data but it will not be stored locally.
+    * `/hist/<currency>/<exchange>/<date_start>/<date_end>`
+        - Returns all data in the specified BTC/currency pair between `date_start` and `date_end`.
+        - Dates can be passed either as ISO-8601 dates (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
+        - If the exchange is not present in your config file, then no data is returned.
 
 ## Origin, Authors, Copyright & Licenses
 
@@ -24,6 +49,9 @@ This table below also establishes provenance (repository of origin, permalink, a
 
 ### Dependencies
 
+To use Spotbit you'll need to use the following tools:
+
+- Python3.8 or higher (some libraries don't work as needed on older versions of Python)
 To build  Spotbit you'll need to use the following tools:
 
 - Python3.8 or higher
@@ -34,6 +62,12 @@ To build  Spotbit you'll need to use the following tools:
 
 All of these Python libraries can be installed via pip. 
 
+### Motivation
+Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
+
+### Derived from…
+
+This  Spotbit project is inspired by the need of Fully Noded 2 to display realtime price info in-app:
 ### Derived from…
 
 This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app::
