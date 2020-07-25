@@ -193,7 +193,7 @@ def request(exchanges,currency,interval,db_n):
                             print("error (fetching ticker): {}".format(err))
                             success = False
                         if success:
-                            ts = datetime.fromtimestamp(price['timestamp'])
+                            ts = datetime.fromtimestamp(price['timestamp']/1e3)
                             statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
                             print(statement)
                             db_n.execute(statement)
