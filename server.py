@@ -92,14 +92,19 @@ def now(currency, exchange):
         cursor = db_n.execute(statement)
         res = cursor.fetchone()
         if res != None:
+            db_n.close()
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
-            return {'result': res}
+            db_n.close()
+            return {'id': res}
     else:
         #make a direct request
         res = request_single(exchange, currency)
-    db_n.close()
-    return res
+        db_n.close()
+        if res != None:
+            return res
+        else:
+            return {'id': res}
 
 # Get data from local storage inside of a certain range.
 # Parameters: 
