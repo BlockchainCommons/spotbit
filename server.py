@@ -17,7 +17,7 @@ configPath = Path("~/.spotbit/spotbit.config").expanduser()
 exchanges = []
 currencies = ["USD"]
 currency="USD"
-interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
+interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
@@ -251,10 +251,12 @@ def read_config():
                             currencies.append(c_formatted)
                         else:
                             currencies.append(c_formatted)
+            elif setting_line[0] == "interval":
+                interval = int(setting_line[1])
             else:
                 return
     #print statement for debugging
-    print("Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}".format(keepWeeks, exchanges, currencies))
+    print(" Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}\n interval: {}".format(keepWeeks, exchanges, currencies, interval))
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
