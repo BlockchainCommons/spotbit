@@ -5,6 +5,7 @@
 .conf
 .db
 .log
+.onion
 
 ### macOS ###
 # General
