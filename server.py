@@ -88,10 +88,13 @@ def now(currency, exchange):
     if exchange in exchanges:
         #if the exchange is already in the config file
         ticker = "BTC-{}".format(currency.upper())
-        statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {}) LIMIT 1;".format(exchange, ticker, exchange)
+        statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
         cursor = db_n.execute(statement)
         res = cursor.fetchone()
-        return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+        if res != None:
+            return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+        else:
+            return res
     else:
         #make a direct request
         res = request_single(exchange, currency)
