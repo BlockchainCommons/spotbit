@@ -94,7 +94,7 @@ def now(currency, exchange):
         if res != None:
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
-            return res
+            return {'result': res}
     else:
         #make a direct request
         res = request_single(exchange, currency)
@@ -198,7 +198,6 @@ def request(exchanges,currency,interval,db_n):
                         if success:
                             ts = datetime.fromtimestamp(price['timestamp']/1e3)
                             statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
-                            print(statement)
                             db_n.execute(statement)
                             db_n.commit()
                     time.sleep(interval)
