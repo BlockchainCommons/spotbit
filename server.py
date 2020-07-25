@@ -214,6 +214,7 @@ def request_periodically(exchanges, currency, interval):
 # Returns void
 def read_config():
     global exchanges
+    global interval
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
