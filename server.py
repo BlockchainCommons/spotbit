@@ -190,6 +190,10 @@ def request(exchanges,currency,interval,db_n):
                         if success:
                             for line in candle:
                                 ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
+                                for l in line:
+                                    if l == None:
+                                        l = 0
+                                #this is another error check condition for when null values slip into the data.
                                 statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
                                 db_n.execute(statement)
                                 db_n.commit()
