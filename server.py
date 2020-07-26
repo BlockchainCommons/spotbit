@@ -76,7 +76,7 @@ def configure():
         interval = flaskRequest.json("interval")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
-        return {'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+        return {'updated settings?':'no', keepWeeks:'keepWeeks', 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
         
 
 # Get the latest price entry in the database.
