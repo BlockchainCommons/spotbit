@@ -68,6 +68,7 @@ def configure():
     global currencies
     global exchanges
     global interval
+    '''
     if flaskRequest.method == 'POST':
         #return the config settings TODO: error check so that the user doesn't have to submit everything at once. Also implement a form here.
         keepWeeks = flaskRequest.json("keepWeeks")
@@ -77,6 +78,8 @@ def configure():
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
         return {'updated settings?':'no', keepWeeks:'keepWeeks', 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+    '''
+    return {'updated settings?':'no', keepWeeks:'keepWeeks', 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
         
 
 # Get the latest price entry in the database.
