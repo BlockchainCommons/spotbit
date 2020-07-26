@@ -11,7 +11,7 @@ from threading import Thread
 from pathlib import Path 
 
 #Config Settings
-allowedFields = ["keepWeeks", "exchanges", "currencies"]
+allowedFields = ["keepWeeks", "exchanges", "currencies", "interval"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
