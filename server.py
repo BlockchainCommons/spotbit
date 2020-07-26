@@ -195,8 +195,19 @@ def request(exchanges,currency,interval,db_n):
                                         l = 0
                                 #this is another error check condition for when null values slip into the data.
                                 statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
-                                db_n.execute(statement)
-                                db_n.commit()
+                                try:
+                                    db_n.execute(statement)
+                                    db_n.commit()
+                                except sqlite3.OperationalError as op:
+                                    nulls = []
+                                    c = 0
+                                    # identify where the null value is 
+                                    for l in line:
+                                        if l == None:
+                                            nulls.append(c)
+                                            c += 1
+                                    print("exchange: {} currency: {}\nsql statement: {} (moving on)".format(e, curr, statement))
+
                             print("inserted into {} {} {} times".format(e, curr, len(candle)))
                     else:
                         try:
