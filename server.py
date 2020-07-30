@@ -206,7 +206,7 @@ def request(exchanges,currency,interval,db_n):
                                         if l == None:
                                             nulls.append(c)
                                             c += 1
-                                    print("exchange: {} currency: {}\nsql statement: {} (moving on)".format(e, curr, statement))
+                                    print("exchange: {} currency: {}\nsql statement: {}\nerror: {}(moving on)".format(e, curr, statement, op))
 
                             print("inserted into {} {} {} times".format(e, curr, len(candle)))
                     else:
