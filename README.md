@@ -34,6 +34,8 @@ To run the server, run `python3.8 server.py`. Spotbit will then start making htt
         - Returns all data in the specified BTC/currency pair between `date_start` and `date_end`.
         - Dates can be passed either as ISO-8601 dates (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
         - If the exchange is not present in your config file, then no data is returned.
+    * `/configure`
+        - Shows the current config settings for this server, including what exchanges and currencies are supported.
 
 ## Origin, Authors, Copyright & Licenses
 
