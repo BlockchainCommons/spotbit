@@ -70,7 +70,6 @@ Spotbit aims to provide an easy option for aggregating exchange data that does n
 ### Derived from…
 
 This  Spotbit project is inspired by the need of Fully Noded 2 to display realtime price info in-app:
-### Derived from…
 
 This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app::
 
