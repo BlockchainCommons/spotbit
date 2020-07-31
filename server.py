@@ -142,7 +142,7 @@ def request_single(exchange, currency):
     ticker = "BTC/{}".format(currency.upper())
     if obj.has['fetchOHLCV']:
         result = None
-        if exchange == "bitfinex":
+        if exchange == "bitfinex": #other exchanges requiring special conditions: bitstamp, bitmart
             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
             try:
                 result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
