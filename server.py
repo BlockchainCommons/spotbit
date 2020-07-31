@@ -19,6 +19,9 @@ currencies = ["USD"]
 currency="USD"
 interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
+exchange_limit = 1 #when there are more exchanges than this multithreading is ideal
+performance_mode = False
+chunk_size = 25 # max number of exchanges per thread
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
@@ -229,12 +232,39 @@ def request_periodically(exchanges, currency, interval):
     while True:
         request(exchanges, currency, interval,db_n)
 
+# Split the list of exchanges into chunks up to size chunk_size.
+# Create a thread for each chunk and start it, then add the thread to a list.
+# Return a list of tuples that contain the list of whats in each chunk and a list of the actual thread objects.
+def request_fast(exchanges, currency, interval):
+    count = 0
+    chunks = []
+    threads = []
+    # split up the list of exchanges
+    for e in exchanges:
+        current_chunk = []
+        while count < chunk_size:
+            current_chunk.append(e)
+            count += 1
+        count = 0
+        chunks.append(current_chunk)
+        current_chunk = []
+    # Start a thread for each chunk
+    for chunk in chunks:
+        cThread = Thread(target=request_periodically, args=(chunk, currency, interval))
+        cThread.start()
+        threads.append(cThread)
+    return (chunks, threads)
+        
+
+
+
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
 # Returns void
 def read_config():
     global exchanges
     global interval
+    global performance_mode
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
@@ -277,6 +307,10 @@ def read_config():
             else:
                 return
     #print statement for debugging
+    if len(exchanges) > exchange_limit:
+        print("{} exchanges detected. Using performance mode (multithreading)".format(len(exchanges)))
+        performance_mode = True
+
     print(" Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}\n interval: {}".format(keepWeeks, exchanges, currencies, interval))
 
 # This method is called at the first run.
@@ -311,9 +345,13 @@ def prune(keepWeeks):
 
 if __name__ == "__main__":
     install() #install will call read_config
-    prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
+    threadResults = None
+    if performance_mode:
+       threadResults = request_fast(exchanges, currency, interval) 
+    else:
+        prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
+        prices_thread.start()
     pruning_thread = Thread(target=prune, args=[keepWeeks])
-    prices_thread.start()
     pruning_thread.start()
     app.run()
     db.close()
