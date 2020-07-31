@@ -17,7 +17,7 @@ configPath = Path("~/.spotbit/spotbit.config").expanduser()
 exchanges = []
 currencies = ["USD"]
 currency="USD"
-interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
+interval = 30 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 1 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
@@ -239,17 +239,19 @@ def request_fast(exchanges, currency, interval):
     count = 0
     chunks = []
     threads = []
+    current_chunk = []
     # split up the list of exchanges
     for e in exchanges:
-        current_chunk = []
-        while count < chunk_size:
+        if count < chunk_size:
             current_chunk.append(e)
             count += 1
-        count = 0
-        chunks.append(current_chunk)
-        current_chunk = []
+        else:
+            count = 0
+            chunks.append(current_chunk)
+            current_chunk = []
     # Start a thread for each chunk
     for chunk in chunks:
+        print("creating thread for chunk {}".format(chunk))
         cThread = Thread(target=request_periodically, args=(chunk, currency, interval))
         cThread.start()
         threads.append(cThread)
