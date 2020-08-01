@@ -21,12 +21,16 @@ interval = 30 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 1 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
-chunk_size = 25 # max number of exchanges per thread
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
 app = Flask(__name__)
+
+# split up the number of exchanges per chunk based on how many cpu cores are available
+# cpuOffset: the number of cores you want to try and utilize. 
+def optimize_chunks(cpuOffset):
+    return int(len(exchanges) / (os.cpu_count()-cpuOffset))
 
 # Create a dict that contains ccxt objects for every supported exchange. 
 # The API will query a subset of these exchanges based on what the user has specified
@@ -235,7 +239,7 @@ def request_periodically(exchanges, currency, interval):
 # Split the list of exchanges into chunks up to size chunk_size.
 # Create a thread for each chunk and start it, then add the thread to a list.
 # Return a list of tuples that contain the list of whats in each chunk and a list of the actual thread objects.
-def request_fast(exchanges, currency, interval):
+def request_fast(exchanges, currency, interval, chunk_size):
     count = 0
     chunks = []
     threads = []
@@ -346,10 +350,15 @@ def prune(keepWeeks):
     
 
 if __name__ == "__main__":
+    
     install() #install will call read_config
+    chunk_size = optimize_chunks(cpuOffset=0)
+    print("aaaaaaaaaaaaa {}".format(chunk_size))
     threadResults = None
+    # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
-       threadResults = request_fast(exchanges, currency, interval) 
+        # request_fast will create and start the threads automatically
+       threadResults = request_fast(exchanges, currency, interval, chunk_size) 
     else:
         prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
         prices_thread.start()
