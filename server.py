@@ -260,9 +260,6 @@ def request_fast(exchanges, currency, interval, chunk_size):
         cThread.start()
         threads.append(cThread)
     return (chunks, threads)
-        
-
-
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -350,10 +347,8 @@ def prune(keepWeeks):
     
 
 if __name__ == "__main__":
-    
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
-    print("aaaaaaaaaaaaa {}".format(chunk_size))
     threadResults = None
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
