@@ -95,7 +95,8 @@ def now(currency, exchange):
     if exchange in exchanges:
         #if the exchange is already in the config file
         ticker = "BTC-{}".format(currency.upper())
-        statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
+        #statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
+        statement = "SELECT * FROM {} WHERE pair = '{}' ORDER BY timestamp DESC LIMIT 1;"
         cursor = db_n.execute(statement)
         res = cursor.fetchone()
         if res != None:
