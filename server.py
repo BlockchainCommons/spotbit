@@ -179,7 +179,6 @@ def request(exchanges,currency,interval,db_n):
     for e in exchanges:
         for curr in currencies:
                 ticker = "BTC/{}".format(curr)
-                print(ticker)
                 success = True
                 if ex_objs[e].has['fetchOHLCV']:
                     candle = None
@@ -195,10 +194,7 @@ def request(exchanges,currency,interval,db_n):
                         try:
                             candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
                         except Exception as err:
-                            if "html" not in str(err):
-                                print("error (fetching candle): {}".format(err))
-                            else:
-                                print("error (fetching candle): {}".format(str(err)[:100]))
+                            print("error (fetching candle): {}".format(err))
                             success = False
                     if success:
                         for line in candle:
