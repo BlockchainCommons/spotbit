@@ -15,11 +15,11 @@ allowedFields = ["keepWeeks", "exchanges", "currencies", "interval"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
-currencies = ["USD"]
-currency="USD"
-interval = 30 #time to wait between GET requests to servers, to avoid ratelimits
+currencies = []
+currency="USD" #remove
+interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
-exchange_limit = 1 #when there are more exchanges than this multithreading is ideal
+exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
@@ -53,6 +53,7 @@ def is_supported(exchange):
         else:
             return False
     except Exception:
+        print("caught an error")
         return False
 
 # We create a list of all exchanges to do error checking on user input
@@ -174,61 +175,70 @@ def request_single(exchange, currency):
 # Loop through all chosen exchanges, check if they are supported, loop through all chosen currencies, for each make request to ohlc endpoint if supported, else price ticker. Write data to local storage.
 # Bitfinex special rule: bitfinex returns candles from the beginning of time, not the most recent. This is a behavior of the API itself and has nothing to do with this code or ccxt. Therefore we must specify the timeframe desired in the optional params field of the function call with a dictionary of available options.
 def request(exchanges,currency,interval,db_n):
+    global currencies
     for e in exchanges:
-        if is_supported(e):
-            for curr in currencies:
-                    ticker = "BTC/{}".format(curr)
-                    success = True
-                    if ex_objs[e].has['fetchOHLCV']:
-                        candle = None
-                        if e == "bitfinex":
-                            params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
-                            try:
-                                candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
-                            except Exception as err: #figure out this error type
-                                #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
-                                print("error (fetching candle (bitfinex)): {}".format(err))
-                                success = False
-                        else:
-                            try:
-                                candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
-                            except Exception as err:
-                                print("error (fetching candle): {}".format(err))
-                                success = False
-                        if success:
-                            for line in candle:
-                                ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
-                                for l in line:
-                                    if l == None:
-                                        l = 0
-                                #this is another error check condition for when null values slip into the data.
-                                statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
-                                try:
-                                    db_n.execute(statement)
-                                    db_n.commit()
-                                except sqlite3.OperationalError as op:
-                                    nulls = []
-                                    c = 0
-                                    # identify where the null value is 
-                                    for l in line:
-                                        if l == None:
-                                            nulls.append(c)
-                                            c += 1
-                                    print("exchange: {} currency: {}\nsql statement: {}\nerror: {}(moving on)".format(e, curr, statement, op))
-
-                            print("inserted into {} {} {} times".format(e, curr, len(candle)))
+        for curr in currencies:
+                ticker = "BTC/{}".format(curr)
+                print(ticker)
+                success = True
+                if ex_objs[e].has['fetchOHLCV']:
+                    candle = None
+                    if e == "bitfinex":
+                        params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
+                        try:
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                        except Exception as err: #figure out this error type
+                            #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
+                            print("error (fetching candle (bitfinex)): {}".format(err))
+                            success = False
                     else:
                         try:
-                            price = ex_objs[e].fetch_ticker(ticker)
+                            candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
                         except Exception as err:
-                            print("error (fetching ticker): {}".format(err))
+                            if "html" not in str(err):
+                                print("error (fetching candle): {}".format(err))
+                            else:
+                                print("error (fetching candle): {}".format(str(err)[:100]))
                             success = False
-                        if success:
+                    if success:
+                        for line in candle:
+                            ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
+                            for l in line:
+                                if l == None:
+                                    l = 0
+                            #this is another error check condition for when null values slip into the data.
+                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, line[0], ts, ticker.replace("/", "-"), line[1], line[2], line[3], line[4], line[5])
+                            try:
+                                db_n.execute(statement)
+                                db_n.commit()
+                            except sqlite3.OperationalError as op:
+                                nulls = []
+                                c = 0
+                                # identify where the null value is 
+                                for l in line:
+                                    if l == None:
+                                        nulls.append(c)
+                                        c += 1
+                                print("exchange: {} currency: {}\nsql statement: {}\nerror: {}(moving on)".format(e, curr, statement, op))
+
+                        print("inserted into {} {} {} times".format(e, curr, len(candle)))
+                else:
+                    try:
+                        price = ex_objs[e].fetch_ticker(ticker)
+                    except Exception as err:
+                        print("error (fetching ticker): {}".format(err))
+                        success = False
+                    if success:
+                        ts = None
+                        if str(price['timestamp'])[-3:] == "000":
                             ts = datetime.fromtimestamp(price['timestamp']/1e3)
-                            statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
-                            db_n.execute(statement)
-                            db_n.commit()
-                    time.sleep(interval)
+                        else:
+                            ts = datetime.fromtimestamp(price['timestamp'])
+                        statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
+                        db_n.execute(statement)
+                        db_n.commit()
+                        print("inserted into {} {}".format(e, curr))
+                time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
@@ -288,14 +298,14 @@ def read_config():
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
                 for e in exs:
-                    if e.replace("\n", "") == "all":
+                    e = e.replace("\n", "")
+                    if e == "all":
                         exchanges = list(ex_objs.keys())
                         break
-                    if is_supported(e) == False:
+                    if e not in exchanges and is_supported(e) == True:
+                        exchanges.append(e)
+                    else:
                         print("{} is not supported by ccxt!".format(e))
-                    e_formatted = e.replace("\n", "")
-                    if e_formatted not in exchanges:
-                        exchanges.append(e_formatted)
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
@@ -356,6 +366,7 @@ if __name__ == "__main__":
         # request_fast will create and start the threads automatically
        threadResults = request_fast(exchanges, currency, interval, chunk_size) 
     else:
+        print("performance mode is OFF")
         prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
         prices_thread.start()
     pruning_thread = Thread(target=prune, args=[keepWeeks])
