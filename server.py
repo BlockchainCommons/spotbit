@@ -16,7 +16,6 @@ configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
 currencies = []
-currency="USD" #remove
 interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
@@ -175,7 +174,7 @@ def request_single(exchange, currency):
 # TODO: add error checking for if an exchange supports ohlc data. If not, default to regular price data. (done)
 # Loop through all chosen exchanges, check if they are supported, loop through all chosen currencies, for each make request to ohlc endpoint if supported, else price ticker. Write data to local storage.
 # Bitfinex special rule: bitfinex returns candles from the beginning of time, not the most recent. This is a behavior of the API itself and has nothing to do with this code or ccxt. Therefore we must specify the timeframe desired in the optional params field of the function call with a dictionary of available options.
-def request(exchanges,currency,interval,db_n):
+def request(exchanges,interval,db_n):
     global currencies
     for e in exchanges:
         for curr in currencies:
@@ -239,15 +238,15 @@ def request(exchanges,currency,interval,db_n):
 
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
-def request_periodically(exchanges, currency, interval):
+def request_periodically(exchanges, interval):
     db_n = sqlite3.connect(p)
     while True:
-        request(exchanges, currency, interval,db_n)
+        request(exchanges,interval,db_n)
 
 # Split the list of exchanges into chunks up to size chunk_size.
 # Create a thread for each chunk and start it, then add the thread to a list.
 # Return a list of tuples that contain the list of whats in each chunk and a list of the actual thread objects.
-def request_fast(exchanges, currency, interval, chunk_size):
+def request_fast(exchanges,interval, chunk_size):
     count = 0
     chunks = []
     threads = []
@@ -264,7 +263,7 @@ def request_fast(exchanges, currency, interval, chunk_size):
     # Start a thread for each chunk
     for chunk in chunks:
         print(f"creating thread for chunk {chunk}")
-        cThread = Thread(target=request_periodically, args=(chunk, currency, interval))
+        cThread = Thread(target=request_periodically, args=(chunk,interval))
         cThread.start()
         threads.append(cThread)
     return (chunks, threads)
@@ -362,10 +361,10 @@ if __name__ == "__main__":
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
-       threadResults = request_fast(exchanges, currency, interval, chunk_size) 
+       threadResults = request_fast(exchanges, interval, chunk_size) 
     else:
         print("performance mode is OFF")
-        prices_thread = Thread(target=request_periodically, args=(exchanges, currency, interval))
+        prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
     pruning_thread = Thread(target=prune, args=[keepWeeks])
     pruning_thread.start()
