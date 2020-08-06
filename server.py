@@ -52,13 +52,14 @@ def is_supported(exchange):
             return True
         else:
             return False
-    except Exception:
-        print("caught an error")
+    except Exception as e:
+        print(f"caught an error: {e}")
         return False
 
 # We create a list of all exchanges to do error checking on user input
 ex_objs = init_supported_exchanges()
-print("created list of {} exchanges".format(len(ex_objs)))
+num_exchanges = len(ex_objs)
+print(f"created list of {num_exchanges}")
 
 # TODO: create an html page to render here
 @app.route('/status')
@@ -156,12 +157,12 @@ def request_single(exchange, currency):
             try:
                 result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
             except Exception as e:
-                print("got ratelimited on {}".format(exchange))
+                print(f"got an error requesting to {exchange}: {e}")
         else:
             try:
                 result = obj.fetch_ohlcv(ticker, timeframe='1m')
             except Exception as e:
-                print("got ratelimited on {}".format(e))
+                print(f"got an error requesting to {exchange}: {e}")
     else:
         try:
             result = obj.fetch_ticker(ticker)
@@ -188,13 +189,13 @@ def request(exchanges,currency,interval,db_n):
                             candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
                         except Exception as err: #figure out this error type
                             #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
-                            print("error (fetching candle (bitfinex)): {}".format(err))
+                            print(f"error fetching candle (bitfinex): {err}")
                             success = False
                     else:
                         try:
                             candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
                         except Exception as err:
-                            print("error (fetching candle): {}".format(err))
+                            print(f"error fetching candle: {err}")
                             success = False
                     if success:
                         for line in candle:
@@ -215,14 +216,14 @@ def request(exchanges,currency,interval,db_n):
                                     if l == None:
                                         nulls.append(c)
                                         c += 1
-                                print("exchange: {} currency: {}\nsql statement: {}\nerror: {}(moving on)".format(e, curr, statement, op))
-
-                        print("inserted into {} {} {} times".format(e, curr, len(candle)))
+                                print(f"exchange: {e} currency: {curr}\nsql statement: {statement}\nerror: {op}(moving on)")
+                        candle_len = len(candle)
+                        print(f"inserted into {e} {curr} {candle_len} times")
                 else:
                     try:
                         price = ex_objs[e].fetch_ticker(ticker)
                     except Exception as err:
-                        print("error (fetching ticker): {}".format(err))
+                        print(f"error fetching ticker: {err}")
                         success = False
                     if success:
                         ts = None
@@ -233,7 +234,7 @@ def request(exchanges,currency,interval,db_n):
                         statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
                         db_n.execute(statement)
                         db_n.commit()
-                        print("inserted into {} {}".format(e, curr))
+                        print(f"inserted into {e} {curr}")
                 time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
@@ -262,7 +263,7 @@ def request_fast(exchanges, currency, interval, chunk_size):
             current_chunk = []
     # Start a thread for each chunk
     for chunk in chunks:
-        print("creating thread for chunk {}".format(chunk))
+        print(f"creating thread for chunk {chunk}")
         cThread = Thread(target=request_periodically, args=(chunk, currency, interval))
         cThread.start()
         threads.append(cThread)
@@ -285,12 +286,12 @@ def read_config():
             if "#" in setting_line[0]:
                 pass #ignore comments
             elif setting_line[0] not in allowedFields and "#" not in setting_line[0]:
-                print("invalid config setting {}".format(setting_line[0]))
+                print(f"invalid config setting {setting_line[0]}")
             elif setting_line[0] == "keepWeeks":
                 try:
                     keepWeeks = int(setting_line[1])
                 except Exception as e:
-                    print("could not read keepWeeks field. Using default setting of {} weeks. Error: {}".format(e, keepWeeks))
+                    print(f"could not read keepWeeks field. Using default setting of {keepWeeks} weeks. Error: {e}")
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
                 for e in exs:
@@ -301,7 +302,7 @@ def read_config():
                     if e not in exchanges and is_supported(e) == True:
                         exchanges.append(e)
                     else:
-                        print("{} is not supported by ccxt!".format(e))
+                        print(f"{e} is not supported by ccxt!")
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
@@ -317,11 +318,12 @@ def read_config():
             else:
                 return
     #print statement for debugging
-    if len(exchanges) > exchange_limit:
-        print("{} exchanges detected. Using performance mode (multithreading)".format(len(exchanges)))
+    len_exchanges = len(exchanges)
+    if len_exchanges > exchange_limit:
+        print(f"{len_exchanges} exchanges detected. Using performance mode (multithreading)")
         performance_mode = True
 
-    print(" Settings read:\n keepWeeks: {}\n exchanges: {}\n currencies: {}\n interval: {}".format(keepWeeks, exchanges, currencies, interval))
+    print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}")
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
@@ -329,11 +331,11 @@ def read_config():
 def install():
     read_config()
     #create the sqlite db
-    print("creating tables for {} exchanges if they do not exist already.".format(len(exchanges)))
+    len_exchanges = len(exchanges)
+    print(f"creating tables for {len_exchanges} exchanges if they do not exist already.")
     for exchange in exchanges:
-        #change this to f-strings
-        sql = "CREATE TABLE IF NOT EXISTS {} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER, datetime TEXT, pair TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL)".format(exchange)
-        print("created table for {}".format(exchange))
+        sql = f"CREATE TABLE IF NOT EXISTS {exchange} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER, datetime TEXT, pair TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL)"
+        print(f"created table for {exchange}")
         db.execute(sql)
         db.commit()
     db.close()
