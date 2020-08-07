@@ -68,10 +68,7 @@ All of these Python libraries can be installed via pip.
 Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
 
 ### Derived from…
-
-This  Spotbit project is inspired by the need of Fully Noded 2 to display realtime price info in-app:
-
-This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app::
+This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app:
 
 - [FullyNoded 2](https://github.com/BlockchainCommons/FullyNoded-2) — The mobile app for managing a BTC node via Tor, by [Fonta1n3](https://github.com/Fonta1n3).
 

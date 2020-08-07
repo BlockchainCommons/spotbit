@@ -1,5 +1,12 @@
 # Created by https://www.gitignore.io/api/macos
 
+### Config files, database files, logs###
+.config
+.conf
+.db
+.log
+.onion
+
 ### macOS ###
 # General
 .DS_Store
