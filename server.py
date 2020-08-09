@@ -233,7 +233,7 @@ def request(exchanges,interval,db_n):
                         statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
                         db_n.execute(statement)
                         db_n.commit()
-                        print(f"inserted into {e} {curr}")
+                        print(f"inserted into {e} {curr} VALUE: {price}")
                 time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
@@ -267,6 +267,39 @@ def request_fast(exchanges,interval, chunk_size):
         cThread.start()
         threads.append(cThread)
     return (chunks, threads)
+
+# Fetch the complete historical data for an exchange for a given time interval in milliseconds
+# start_date is the oldest date
+# end_date is the newest date
+def request_history(exchange, currency, start_date, end_date):
+    db_n = sqlite3.connect(p)
+    ticker = f"BTC/{currency}"
+    while start_date < end_date:
+        #params = {'limit': 10000, 'start': start_date, 'end': int((datetime.fromtimestamp(start_date/1e3) + timedelta(hours=2)).timestamp()*1e3)}
+        params = {'start': start_date, 'end': end_date}
+        tick = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', params=params)
+        for line in tick:
+            dt = None
+            symbol = ticker.replace("/", "-")
+            try:
+                if line['timestamp'] % 1000 == 0:
+                    dt = datetime.fromtimestamp(line['timestamp'] / 1e3)
+                else:
+                    dt = datetime.fromtimestamp(line['timestamp'])
+                statement = f"INSERT INTO {exchange} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({line['timestamp']}, '{dt}', '{symbol}', 0.0, 0.0, 0.0, {line['last']}, 0.0);"
+            except TypeError:
+                if line[0] % 1000 == 0:
+                    dt = datetime.fromtimestamp(line[0] / 1e3)
+                else:
+                    dt = datetime.fromtimestamp(line[0])
+                statement = f"INSERT INTO {exchange} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({line[0]}, '{dt}', '{symbol}', {line[1]}, {line[2]}, {line[3]}, {line[4]}, {line[5]});"
+            db_n.execute(statement)
+            db_n.commit()
+        l = len(tick)
+        print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
+        start_date += 1e4
+        time.sleep(3)
+    print("fetching historical data.")
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -358,7 +391,14 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
+    print("trying something here...")
+    now = datetime.now().timestamp()
+    now *= 1e3
+    #testing dates in 2019
+    request_history("bitfinex", "USD", 1565214195000, 1565386995000)
+    print("done trying shit")
     # spin up many threads if there is a lot of exchanges present in the config file
+
     if performance_mode:
         # request_fast will create and start the threads automatically
        threadResults = request_fast(exchanges, interval, chunk_size) 
