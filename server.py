@@ -226,7 +226,7 @@ def request(exchanges,interval,db_n):
                         success = False
                     if success:
                         ts = None
-                        if str(price['timestamp'])[-3:] == "000":
+                        if price['timestamp'] % 1000 == 0:
                             ts = datetime.fromtimestamp(price['timestamp']/1e3)
                         else:
                             ts = datetime.fromtimestamp(price['timestamp'])
