@@ -238,7 +238,7 @@ def request(exchanges,interval,db_n):
                         statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
                         db_n.execute(statement)
                         db_n.commit()
-                        print(f"inserted into {e} {curr} VALUE: {price}")
+                        print(f"inserted into {e} {curr} VALUE: {price['last']}")
                 time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
