@@ -235,7 +235,8 @@ def request(exchanges,interval,db_n):
                             ts = datetime.fromtimestamp(price['timestamp']/1e3)
                         else:
                             ts = datetime.fromtimestamp(price['timestamp'])
-                        statement = "INSERT INTO {} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({}, '{}', '{}', {}, {}, {}, {}, {});".format(e, price['timestamp'], ts, ticker.replace("/", "-"), 0.0, 0.0, 0.0, price['last'], 0.0)
+                            ticker = ticker.replace("/", "-")
+                        statement = f"INSERT INTO {e} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({price['timestamp']}, '{ts}', '{ticker}', 0.0, 0.0, 0.0, {price['last']}, 0.0);"
                         db_n.execute(statement)
                         db_n.commit()
                         print(f"inserted into {e} {curr} VALUE: {price['last']}")
