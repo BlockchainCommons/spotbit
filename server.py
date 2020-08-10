@@ -410,8 +410,8 @@ if __name__ == "__main__":
         print("performance mode is OFF")
         prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
-    pruning_thread = Thread(target=prune, args=[keepWeeks])
-    pruning_thread.start()
+    #pruning_thread = Thread(target=prune, args=[keepWeeks])
+    #pruning_thread.start()
     app.run()
     db.close()
 
