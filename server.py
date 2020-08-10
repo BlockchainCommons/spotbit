@@ -92,14 +92,18 @@ def configure():
 # Exchange: the exchange to query data for from the local database. Must be an exchange you are already caching data for (for now)
 @app.route('/now/<currency>/<exchange>')
 def now(currency, exchange):
-    db_n = sqlite3.connect(p)
+    db_n = sqlite3.connect(p, timeout=10)
     if exchange in exchanges:
         #if the exchange is already in the config file
         ticker = "BTC-{}".format(currency.upper())
         #statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
         statement = "SELECT * FROM {} WHERE pair = '{}' ORDER BY timestamp DESC LIMIT 1;".format(exchange, ticker)
-        cursor = db_n.execute(statement)
-        res = cursor.fetchone()
+        try:
+            cursor = db_n.execute(statement)
+            res = cursor.fetchone()
+        except sqlite3.OperationalError: 
+            print("database is locked. Cannot access this")
+            return {'err': 'database locked'}
         if res != None:
             db_n.close()
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
@@ -122,7 +126,7 @@ def now(currency, exchange):
 #   date_start and date_end: date_start is the oldest time value in the range desired. It can be provided as a millisecond timestamp or as a datetime formatted as "YYYY-MM-DDTHH:mm:SS".
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
 def hist(currency, exchange, date_start, date_end):
-    db_n = sqlite3.connect(p)
+    db_n = sqlite3.connect(p, timeout=10)
     #check what format of dates we have
     if (str(date_start)).isdigit():
         date_s = int(date_start)         
@@ -193,8 +197,8 @@ def request(exchanges,interval,db_n):
                     else:
                         try:
                             candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
-                        except Exception as err:
-                            print(f"error fetching candle: {err}")
+                        except Exception:
+                            print(f"error fetching candle: {e} {curr}")
                             success = False
                     if success:
                         for line in candle:
@@ -207,6 +211,9 @@ def request(exchanges,interval,db_n):
                             try:
                                 db_n.execute(statement)
                                 db_n.commit()
+                                db_n.close()
+                                candle_len = len(candle)
+                                print(f"inserted into {e} {curr} {candle_len} times")
                             except sqlite3.OperationalError as op:
                                 nulls = []
                                 c = 0
@@ -216,8 +223,6 @@ def request(exchanges,interval,db_n):
                                         nulls.append(c)
                                         c += 1
                                 print(f"exchange: {e} currency: {curr}\nsql statement: {statement}\nerror: {op}(moving on)")
-                        candle_len = len(candle)
-                        print(f"inserted into {e} {curr} {candle_len} times")
                 else:
                     try:
                         price = ex_objs[e].fetch_ticker(ticker)
@@ -239,7 +244,7 @@ def request(exchanges,interval,db_n):
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
 def request_periodically(exchanges, interval):
-    db_n = sqlite3.connect(p)
+    db_n = sqlite3.connect(p, timeout=10)
     while True:
         request(exchanges,interval,db_n)
 
@@ -272,7 +277,8 @@ def request_fast(exchanges,interval, chunk_size):
 # start_date is the oldest date
 # end_date is the newest date
 def request_history(exchange, currency, start_date, end_date):
-    db_n = sqlite3.connect(p)
+    global interval
+    db_n = sqlite3.connect(p, timeout=10)
     ticker = f"BTC/{currency}"
     while start_date < end_date:
         #params = {'limit': 10000, 'start': start_date, 'end': int((datetime.fromtimestamp(start_date/1e3) + timedelta(hours=2)).timestamp()*1e3)}
@@ -297,9 +303,8 @@ def request_history(exchange, currency, start_date, end_date):
             db_n.commit()
         l = len(tick)
         print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
-        start_date += 1e4
-        time.sleep(3)
-    print("fetching historical data.")
+        start_date += 1e4 #leaving this hardcoded for now
+        time.sleep(interval)
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -376,7 +381,7 @@ def install():
 # if there is nothing to prune then nothing will be pruned.
 def prune(keepWeeks):
     # prune checks will run continuously and check every 60k seconds right now.
-    db_n = sqlite3.connect(p)
+    db_n = sqlite3.connect(p, timeout=10)
     while True:
         for exchange in exchanges:
             #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
@@ -391,12 +396,10 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    print("trying something here...")
-    now = datetime.now().timestamp()
-    now *= 1e3
+    #print("trying something here...")
     #testing dates in 2019
-    request_history("bitfinex", "USD", 1565214195000, 1565386995000)
-    print("done trying shit")
+    #request_history("kraken", "USD", 1565214195000, 1565386995000)
+    #print("done trying shit")
     # spin up many threads if there is a lot of exchanges present in the config file
 
     if performance_mode:
