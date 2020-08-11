@@ -331,6 +331,16 @@ def request_history(exchange, currency, start_date, end_date):
         print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         start_date += 1e4 #leaving this hardcoded for now
         time.sleep(interval)
+    
+# Create a thread for each exchange that needs history.
+def request_history_periodically(histExchanges, currencies, start_date):
+    history_threads = []
+    for h in histExchanges:
+        hThread = Thread(target=request_history, args=(h, "USD", historyEnd, datetime.now().timestamp()*1e3))
+        hThread.start()
+        history_threads.append(hThread)
+        print(f"started thread for {h}")
+    return history_threads
 
 # Read the values stored in the config file and store them in memory.
 # Run during install and at every run of the server.
@@ -468,6 +478,7 @@ if __name__ == "__main__":
         print("performance mode is OFF")
         prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
+    request_history_periodically(historicalExchanges, currencies, historyEnd)
     #pruning_thread = Thread(target=prune, args=[keepWeeks])
     #pruning_thread.start()
     app.run()
