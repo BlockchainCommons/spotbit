@@ -227,6 +227,7 @@ def request(exchanges,interval,db_n):
                             print(f"error fetching candle: {e} {curr}")
                             success = False
                     if success:
+                        times_inserted = 0
                         for line in candle:
                             ts = datetime.fromtimestamp(line[0]/1e3) #check here if we have a ms timestamp or not
                             for l in line:
@@ -237,8 +238,7 @@ def request(exchanges,interval,db_n):
                             try:
                                 db_n.execute(statement)
                                 db_n.commit()
-                                candle_len = len(candle)
-                                print(f"inserted into {e} {curr} {candle_len} times")
+                                times_inserted += len(candle)
                             except sqlite3.OperationalError as op:
                                 nulls = []
                                 c = 0
@@ -248,6 +248,7 @@ def request(exchanges,interval,db_n):
                                         nulls.append(c)
                                         c += 1
                                 print(f"exchange: {e} currency: {curr}\nsql statement: {statement}\nerror: {op}(moving on)")
+                        print(f"inserted into {e} {curr} {times_inserted} times")
                 else:
                     try:
                         price = ex_objs[e].fetch_ticker(ticker)
