@@ -211,7 +211,6 @@ def request(exchanges,interval,db_n):
                             try:
                                 db_n.execute(statement)
                                 db_n.commit()
-                                db_n.close()
                                 candle_len = len(candle)
                                 print(f"inserted into {e} {curr} {candle_len} times")
                             except sqlite3.OperationalError as op:
