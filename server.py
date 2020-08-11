@@ -23,6 +23,7 @@ exchange_limit = 2 #when there are more exchanges than this multithreading is id
 performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
 historyEnd = 0
+score = 0 #the current percent of empty tables
 
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
@@ -67,7 +68,8 @@ print(f"created list of {num_exchanges}")
 # TODO: create an html page to render here
 @app.route('/status')
 def status():
-    return "server is running"
+    global score
+    return f"{score}% of tables are empty. Server is running"
 
 # configure the settings of Spotbit while the server is still running
 # send a GET request to this route to view current settings
@@ -432,10 +434,12 @@ def poke_db(exchanges):
         c = db_n.execute(statement)
         db_n.commit()
         res = c.fetchone()
-        if c == None:
+        if res == None:
             print(f"{e} table is empty!")
     score = round((empties / len(exchanges))*100)
     print(f"{score}% of tables are empty")
+    return score
+
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
 # Tables are only created if they do not already exist. Install will attempt to create tables for every listed exchange at once when called.
@@ -476,10 +480,11 @@ def prune(keepWeeks):
     
 
 if __name__ == "__main__":
+    global score
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    poke_db(exchanges)
+    score = poke_db(exchanges)
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
