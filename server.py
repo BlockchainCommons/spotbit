@@ -423,6 +423,18 @@ def read_config():
 
     print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}\n exchange_limit: {exchange_limit}\n averaging_time: {averaging_time}\n historicalExchanges: {historicalExchanges}\n historyEnd: {historyEnd}")
 
+def poke_db(exchanges):
+    db_n = sqlite3.connect(p)
+    empties = 0
+    for e in exchanges:
+        statement = f"SELECT * FROM {e} ORDER BY timestamp DESC LIMIT 1;"
+        c = db_n.execute(statement)
+        db_n.commit()
+        res = c.fetchone()
+        if c == None:
+            print(f"{e} table is empty!")
+    score = round((empties / len(exchanges))*100)
+    print(f"{score}% of tables are empty")
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
 # Tables are only created if they do not already exist. Install will attempt to create tables for every listed exchange at once when called.
@@ -466,6 +478,7 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
+    poke_db(exchanges)
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
