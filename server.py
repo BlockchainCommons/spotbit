@@ -436,7 +436,7 @@ def poke_db(exchanges):
         res = c.fetchone()
         if res == None:
             print(f"{e} table is empty!")
-    score = round((empties / len(exchanges))*100)
+    score = (empties / len(exchanges))*100
     print(f"{score}% of tables are empty")
     return score
 
