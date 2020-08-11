@@ -480,7 +480,6 @@ def prune(keepWeeks):
     
 
 if __name__ == "__main__":
-    global score
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
