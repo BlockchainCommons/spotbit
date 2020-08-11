@@ -11,7 +11,7 @@ from threading import Thread
 from pathlib import Path 
 
 #Config Settings
-allowedFields = ["keepWeeks", "exchanges", "currencies", "interval"]
+allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
@@ -335,6 +335,8 @@ def read_config():
     global exchanges
     global interval
     global performance_mode
+    global averaging_time
+    global exchange_limit
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
@@ -374,6 +376,16 @@ def read_config():
                             currencies.append(c_formatted)
             elif setting_line[0] == "interval":
                 interval = int(setting_line[1])
+            elif setting_line[0] == "exchange_limit":
+                try: 
+                    exchange_limit = int((setting_line[1].replace("\n", "")))
+                except TypeError:
+                    print("invalid value in exchange_limit field. Must be int")
+            elif setting_line[1] == "averaging_time":
+                try:
+                    averaging_time = int((setting_line[1]).replace("\n", ""))
+                except TypeError:
+                    print("invalid value in averaging_time field. Must be int (number of hours)")
             else:
                 return
     #print statement for debugging
