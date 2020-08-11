@@ -44,7 +44,7 @@ def optimize_chunks(cpuOffset):
 # Need to find a way to automatically create a list of exchange objects. 
 # btctradeim doesn't want to work on raspberry pi
 def init_supported_exchanges():
-    objects = {"acx":ccxt.acx(), "anxpro":ccxt.anxpro(), "aofex":ccxt.aofex(), "bcex":ccxt.bcex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bit2c":ccxt.bit2c(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmart":ccxt.bitmart(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeua":ccxt.btctradeua(), "btcturk":ccxt.btcturk(), "buda":ccxt.buda(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coingi":ccxt.coingi(), "coinmarketcap":ccxt.coinmarketcap(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "coinspot":ccxt.coinspot(), "coolcoin":ccxt.coolcoin(), "coss":ccxt.coss(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "deribit":ccxt.deribit(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "fcoin":ccxt.fcoin(), "fcoinjp":ccxt.fcoinjp, "flowbtc":ccxt.flowbtc(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "fybse":ccxt.fybse(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "idex":ccxt.idex(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "kuna":ccxt.kuna(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "mixcoins":ccxt.mixcoins(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "qtrade":ccxt.qtrade(), "rightbtc":ccxt.rightbtc(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "stronghold":ccxt.stronghold(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "xbtce":ccxt.xbtce(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
+    objects = {"acx":ccxt.acx(), "aofex":ccxt.aofex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeua":ccxt.btctradeua(), "buda":ccxt.buda(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
     return objects
 
 # Check if a given exchange is in the list of supported exchanges.
@@ -222,11 +222,23 @@ def request(exchanges,interval,db_n):
                             #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
                             print(f"error fetching candle (bitfinex): {err}")
                             success = False
+                    elif e == "bleutrade" or  e == "btcalpha" or e == "rightbtc":
+                        try:
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1h', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                        except Exception as err:
+                            print(f"error fetching candle: {e} {curr} {err}")
+                            success = False
+                    elif e == "poloniex":
+                        try:
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='5m', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                        except Exception as err:
+                            print(f"error fetching candle: {e} {curr} {err}")
+                            success = False
                     else:
                         try:
-                            candle = ex_objs[e].fetch_ohlcv(ticker, '1m') #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
-                        except Exception:
-                            print(f"error fetching candle: {e} {curr}")
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                        except Exception as err:
+                            print(f"error fetching candle: {e} {curr} {err}")
                             success = False
                     if success:
                         times_inserted = 0
@@ -483,7 +495,7 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    score = poke_db(exchanges)
+    #score = poke_db(exchanges)
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
