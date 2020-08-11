@@ -98,7 +98,7 @@ def configure():
 # Exchange: the exchange to query data for from the local database.
 @app.route('/now/<currency>/<exchange>')
 def now(currency, exchange):
-    db_n = sqlite3.connect(p, timeout=10)
+    db_n = sqlite3.connect(p, timeout=30)
     ticker = "BTC-{}".format(currency.upper())
     if exchange in exchanges:
         #if the exchange is already in the config file
@@ -289,7 +289,7 @@ def request(exchanges,interval,db_n):
 # Thread method. Makes requests every interval seconds. 
 # Adding this method here to make request more versatile while maintaining the same behavior
 def request_periodically(exchanges, interval):
-    db_n = sqlite3.connect(p, timeout=10)
+    db_n = sqlite3.connect(p, timeout=30)
     while True:
         request(exchanges,interval,db_n)
 
