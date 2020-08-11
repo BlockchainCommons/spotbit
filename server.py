@@ -16,10 +16,11 @@ configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
 currencies = []
-interval = 1 #time to wait between GET requests to servers, to avoid ratelimits
+interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
+averaging_time = 4 # the number of hours that we should average information over
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
@@ -93,11 +94,11 @@ def configure():
 @app.route('/now/<currency>/<exchange>')
 def now(currency, exchange):
     db_n = sqlite3.connect(p, timeout=10)
+    ticker = "BTC-{}".format(currency.upper())
     if exchange in exchanges:
         #if the exchange is already in the config file
-        ticker = "BTC-{}".format(currency.upper())
         #statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
-        statement = "SELECT * FROM {} WHERE pair = '{}' ORDER BY timestamp DESC LIMIT 1;".format(exchange, ticker)
+        statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' ORDER BY timestamp DESC LIMIT 1;"
         try:
             cursor = db_n.execute(statement)
             res = cursor.fetchone()
@@ -110,6 +111,21 @@ def now(currency, exchange):
         else:
             db_n.close()
             return {'id': res}
+    elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
+        result_set = []
+        for e in exchanges:
+            ts_cutoff = (datetime.now() - timedelta(hours=averaging_time)).timestamp()
+            check_ms = f"SELECT timestamp FROM {e} LIMIT 1;"
+            cursor = db_n.execute(check_ms)
+            db_n.commit()
+            if int(cursor.fetchone()[0]) % 1000 == 0:
+                print(f"using ms precision for {e}")
+                ts_cutoff *= 1e3 
+            statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} ORDER BY timestamp LIMIT 1;"
+            cursor = db_n.execute(statement)
+            db_n.commit()
+            result_set.append(cursor.fetchone())
+        return {ticker: list_mean(result_set)}
     else:
         #make a direct request
         res = request_single(exchange, currency)
@@ -118,6 +134,12 @@ def now(currency, exchange):
             return res
         else:
             return {'id': res}
+
+def list_mean(input_list):
+    avg = 0
+    for l in input_list:
+        avg += l[1]
+    return avg/len(input_list)
 
 # Get data from local storage inside of a certain range.
 # Parameters: 
