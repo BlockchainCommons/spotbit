@@ -11,16 +11,19 @@ from threading import Thread
 from pathlib import Path 
 
 #Config Settings
-allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time"]
+allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time", "historicalExchanges", "historyEnd"]
 configPath = Path("~/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
+historicalExchanges = [] # exchanges that we want the history of
 currencies = []
 interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
+historyEnd = 0
+
 #Database
 p = Path("~/.spotbit/sb.db").expanduser()
 db = sqlite3.connect(p)
@@ -90,7 +93,7 @@ def configure():
 
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
-# Exchange: the exchange to query data for from the local database. Must be an exchange you are already caching data for (for now)
+# Exchange: the exchange to query data for from the local database.
 @app.route('/now/<currency>/<exchange>')
 def now(currency, exchange):
     db_n = sqlite3.connect(p, timeout=10)
@@ -135,6 +138,7 @@ def now(currency, exchange):
         else:
             return {'id': res}
 
+# Find the mean of a list of two-value tuples
 def list_mean(input_list):
     avg = 0
     for l in input_list:
@@ -337,6 +341,8 @@ def read_config():
     global performance_mode
     global averaging_time
     global exchange_limit
+    global historicalExchanges
+    global historyEnd
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
@@ -381,11 +387,22 @@ def read_config():
                     exchange_limit = int((setting_line[1].replace("\n", "")))
                 except TypeError:
                     print("invalid value in exchange_limit field. Must be int")
-            elif setting_line[1] == "averaging_time":
+            elif setting_line[0] == "averaging_time":
                 try:
                     averaging_time = int((setting_line[1]).replace("\n", ""))
                 except TypeError:
                     print("invalid value in averaging_time field. Must be int (number of hours)")
+            elif setting_line[0] == "historicalExchanges":
+                hists = setting_line[1].split(" ")
+                for h in hists:
+                    h = (h.replace("\n", ""))
+                    historicalExchanges.append(h)
+                print(f"collecting history for {historicalExchanges}")
+            elif setting_line[0] == "historyEnd":
+                try:
+                    historyEnd = int((setting_line[1]).replace("\n", ""))
+                except TypeError:
+                    print("invalid value in historyEnd. Must be ms timestamp (int)")
             else:
                 return
     #print statement for debugging
@@ -394,7 +411,7 @@ def read_config():
         print(f"{len_exchanges} exchanges detected. Using performance mode (multithreading)")
         performance_mode = True
 
-    print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}")
+    print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}\n exchange_limit: {exchange_limit}\n averaging_time: {averaging_time}\n historicalExchanges: {historicalExchanges}\n historyEnd: {historyEnd}")
 
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
