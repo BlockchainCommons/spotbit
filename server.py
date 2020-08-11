@@ -438,7 +438,9 @@ def read_config():
 
     print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}\n exchange_limit: {exchange_limit}\n averaging_time: {averaging_time}\n historicalExchanges: {historicalExchanges}\n historyEnd: {historyEnd}")
 
+# Check for empty tables in the database
 def poke_db(exchanges):
+    global score
     db_n = sqlite3.connect(p)
     empties = 0
     for e in exchanges:
