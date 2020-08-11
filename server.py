@@ -446,18 +446,19 @@ def prune(keepWeeks):
     while True:
         for exchange in exchanges:
             #count = ((db.execute("SELECT Count(*) FROM {}".format(exchange))).fetchone())[0]
-            check = f"SELECT MAX(timestamp) FROM {exchange};"
-            cursor = db_n.execute(check)
-            check_ts = cursor.fetchone()
-            statement = ""
-            if int(check_ts) % 1000 == 0:
-                cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
-                statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-            else:
-                cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
-                statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-            db_n.execute(statement)
-            db_n.commit()
+            if exchange not in historicalExchanges:
+                check = f"SELECT MAX(timestamp) FROM {exchange};"
+                cursor = db_n.execute(check)
+                check_ts = cursor.fetchone()
+                statement = ""
+                if int(check_ts) % 1000 == 0:
+                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
+                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                else:
+                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
+                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                db_n.execute(statement)
+                db_n.commit()
         time.sleep(60000)
     
 
@@ -465,12 +466,7 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    #print("trying something here...")
-    #testing dates in 2019
-    #request_history("kraken", "USD", 1565214195000, 1565386995000)
-    #print("done trying shit")
     # spin up many threads if there is a lot of exchanges present in the config file
-
     if performance_mode:
         # request_fast will create and start the threads automatically
        threadResults = request_fast(exchanges, interval, chunk_size) 
