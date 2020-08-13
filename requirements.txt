@@ -1,5 +1,3 @@
 ## Requirements for running Spotbit ##
-celery
 flask
-sqlite
 ccxt
