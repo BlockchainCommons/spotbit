@@ -26,7 +26,7 @@ historyEnd = 0
 score = 0 #the current percent of empty tables
 
 #Database
-p = Path("~/.spotbit/sb.db").expanduser()
+p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print("db opened in {}".format(p))
 app = Flask(__name__)
