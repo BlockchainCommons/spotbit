@@ -218,6 +218,8 @@ def request(exchanges,interval,db_n):
                         params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                         try:
                             candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                            if candle == None:
+                                raise Exception(f"candle from {e} is null")
                         except Exception as err: #figure out this error type
                             #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
                             if "does not have" not in str(err):
@@ -226,6 +228,8 @@ def request(exchanges,interval,db_n):
                     elif e == "bleutrade" or  e == "btcalpha" or e == "rightbtc":
                         try:
                             candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1h', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            if candle == None:
+                                raise Exception(f"candle from {e} is nulll")
                         except Exception as err:
                             if "does not have" not in str(err):
                                 print(f"error fetching candle: {e} {curr} {err}")
@@ -233,6 +237,8 @@ def request(exchanges,interval,db_n):
                     elif e == "poloniex":
                         try:
                             candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='5m', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            if candle == None:
+                                raise Exception(f"candle from {e} is null")
                         except Exception as err:
                             if "does not have" not in str(err):
                                 print(f"error fetching candle: {e} {curr} {err}")
@@ -240,6 +246,8 @@ def request(exchanges,interval,db_n):
                     else:
                         try:
                             candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            if candle == None:
+                                raise Exception(f"candle from {e} is null")
                         except Exception as err:
                             if "does not have" not in str(err):
                                 print(f"error fetching candle: {e} {curr} {err}")
