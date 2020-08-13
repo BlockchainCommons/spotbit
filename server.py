@@ -12,7 +12,7 @@ from pathlib import Path
 
 #Config Settings
 allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time", "historicalExchanges", "historyEnd"]
-configPath = Path("~/.spotbit/spotbit.config").expanduser()
+configPath = Path("/home/spotbit/.spotbit/spotbit.config").expanduser()
 #Default values; these will be overwritten when the config file is read
 exchanges = []
 historicalExchanges = [] # exchanges that we want the history of
