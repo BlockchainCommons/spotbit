@@ -39,7 +39,7 @@ sudo apt update
 sudo apt install tor deb.torproject.org-keyring
 ################################################################################################################################
 # Configure the Spotbit user
-/usr/sbin/useradd -m -p `perl -e 'printf("%s\n,crypt($ARGV[0],"spotbit"))' "spotbit"` -g sudo -s /bin/bash/ spotbit
+/usr/sbin/useradd -m -p `perl -e 'printf("%s\n",crypt($ARGV[0],"spotbit"))' "spotbit"` -g sudo -s /bin/bash spotbit
 /usr/sbin/adduser spotbit sudo
 echo "created spotbit user in sudo group"
 
