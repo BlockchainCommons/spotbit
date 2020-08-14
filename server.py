@@ -284,8 +284,9 @@ def request(exchanges,interval,db_n):
                                         c += 1
                                 print(f"exchange: {e} currency: {curr}\nsql statement: {statement}\nerror: {op}(moving on)")
                                 log.error(f"exchange: {e} currency: {curr} sql statement: {statement} error: {op}")
-                        print(f"inserted into {e} {curr} {times_inserted} times")
-                        log.info(f"inserted into {e} {curr} {times_inserted} times")
+                        now = datetime.now()
+                        print(f"[{now}] | inserted into {e} {curr} {times_inserted} times")
+                        log.info(f"[{now}] | inserted into {e} {curr} {times_inserted} times")
                 else:
                     try:
                         price = ex_objs[e].fetch_ticker(ticker)
@@ -303,8 +304,9 @@ def request(exchanges,interval,db_n):
                         statement = f"INSERT INTO {e} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({price['timestamp']}, '{ts}', '{ticker}', 0.0, 0.0, 0.0, {price['last']}, 0.0);"
                         db_n.execute(statement)
                         db_n.commit()
-                        print(f"inserted into {e} {curr} VALUE: {price['last']}")
-                        log.info(f"inserted into {e} {curr} VALUE: {price['last']}")
+                        now = datetime.now()
+                        print(f"[{now}] | inserted into {e} {curr} VALUE: {price['last']}")
+                        log.info(f"[{now}] | inserted into {e} {curr} VALUE: {price['last']}")
                 time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
