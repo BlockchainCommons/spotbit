@@ -37,6 +37,25 @@ To run the server, run `python3.8 server.py`. Spotbit will then start making htt
     * `/configure`
         - Shows the current config settings for this server, including what exchanges and currencies are supported.
 
+#### Config Options
+Spotbbit uses a config file located at `~/.spotbit/spotbit.config` to change settings. The allowed fields are:
+    * `keepWeeks`
+        - The number of weeks worth of data to keep in the database for exchanges that you are not retrieving history for. This setting does not apply to exchanges that have a long term history.
+    * `exchanges`
+        - The exchanges you want to get current data for. They should be supplied as a list of lowercase names separated by spaces.
+    * `currencies`
+        - The fiat currencies you want to get data for. They should be supplied as a list of currency codes (eg USD, AUD, CAD, etc) separated by spaces
+    * `interval`
+        - The time in seconds spotbit should wait between making GET requests to API servers. This value should be between 5-15 seconds for best results.
+    * `exchange_limit`
+        - The number of exchanges to allow to be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Set the threshold higher if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported.
+    * `averaging_time`
+        - The time window in hours that Spotbit will consider "current" when calculating an average price. It is useful to set this to at least an hour or so if you are supporting several dozen or more exchanges, because in these situations some exchanges may occasionally fall slightly behind in the request queue, depending on what you have set as your `interval` and `exchange_limit`.
+    * `historicalExchanges`
+        - Exchanges that you want to request past data for in addition to current data. Should be supplied in the same format as the `exchanges` field.
+    * `historyEnd`
+        - A millisecond timestamp that represents the oldest point in history you want to keep in storage.
+
 ## Origin, Authors, Copyright & Licenses
 
 Unless otherwise noted (either in this [/README.md](./README.md) or in the file's header comments) the contents of this repository are Copyright © 2020 by Blockchain Commons, LLC, and are [licensed](./LICENSE) under the [spdx:BSD-2-Clause Plus Patent License](https://spdx.org/licenses/BSD-2-Clause-Patent.html).
