@@ -9,7 +9,14 @@ import ccxt
 import os
 from threading import Thread
 from pathlib import Path 
+import logging
 
+#setup the logging module for file output
+log = logging.getLogger('spotbit')
+log.setLevel(logging.DEBUG)
+logFileHandler = logging.FileHandler('spotbit.log')
+logFileHandler.setLevel(logging.DEBUG)
+log.addHandler(logFileHandler)
 #Config Settings
 allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time", "historicalExchanges", "historyEnd"]
 configPath = Path("/home/spotbit/.spotbit/spotbit.config").expanduser()
@@ -28,7 +35,8 @@ score = 0 #the current percent of empty tables
 #Database
 p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
-print("db opened in {}".format(p))
+print(f"db opened in {p}")
+log.debug(f"db opened in {p}")
 app = Flask(__name__)
 
 # split up the number of exchanges per chunk based on how many cpu cores are available
@@ -58,12 +66,14 @@ def is_supported(exchange):
             return False
     except Exception as e:
         print(f"caught an error: {e}")
+        log.error(f"caught an error {e}")
         return False
 
 # We create a list of all exchanges to do error checking on user input
 ex_objs = init_supported_exchanges()
 num_exchanges = len(ex_objs)
 print(f"created list of {num_exchanges}")
+log.info(f"created list of {num_exchanges}")
 
 # TODO: create an html page to render here
 @app.route('/status')
@@ -109,6 +119,7 @@ def now(currency, exchange):
             res = cursor.fetchone()
         except sqlite3.OperationalError: 
             print("database is locked. Cannot access this")
+            log.error("database is locked. Cannot access this")
             return {'err': 'database locked'}
         if res != None:
             db_n.close()
@@ -125,6 +136,7 @@ def now(currency, exchange):
             db_n.commit()
             if int(cursor.fetchone()[0]) % 1000 == 0:
                 print(f"using ms precision for {e}")
+                logging.info(f"using ms precision for {e}")
                 ts_cutoff *= 1e3 
             statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
@@ -138,7 +150,10 @@ def now(currency, exchange):
         if res != None:
             return res
         else:
-            return {'id': res}
+            try:
+                return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+            except Exception:
+                return {'id': res}
 
 # Find the mean of a list of two-value tuples
 def list_mean(input_list):
@@ -189,16 +204,19 @@ def request_single(exchange, currency):
                 result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
+                logging.error(f"got an error requesting to {exchange}: {e}")
         else:
             try:
                 result = obj.fetch_ohlcv(ticker, timeframe='1m')
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
+                logging.error(f"got an error requesting to {exchange}: {e}")
     else:
         try:
             result = obj.fetch_ticker(ticker)
         except Exception as e:
-            print("got ratelimited on {}".format(e))
+            print(f"got ratelimited on {e}")
+            logging.error(f"got ratelimited on {e}")
     return {'data': result[-1]}
 
 
@@ -229,6 +247,7 @@ def request(exchanges,interval,db_n):
                             #the point so far is to gracefully handle the error, but waiting for the next cycle should be good enough
                             if "does not have" not in str(err):
                                 print(f"error fetching candle: {e} {curr} {err}")
+                                log.error(f"error fetching candle: {e} {curr} {err}")
                             success = False
                     else:
                         try:
@@ -238,6 +257,7 @@ def request(exchanges,interval,db_n):
                         except Exception as err:
                             if "does not have" not in str(err):
                                 print(f"error fetching candle: {e} {curr} {err}")
+                                log.error(f"error fetching candle: {e} {curr} {err}")
                             success = False
                     if success:
                         times_inserted = 0
@@ -261,12 +281,15 @@ def request(exchanges,interval,db_n):
                                         nulls.append(c)
                                         c += 1
                                 print(f"exchange: {e} currency: {curr}\nsql statement: {statement}\nerror: {op}(moving on)")
+                                log.error(f"exchange: {e} currency: {curr} sql statement: {statement} error: {op}")
                         print(f"inserted into {e} {curr} {times_inserted} times")
+                        log.info(f"inserted into {e} {curr} {times_inserted} times")
                 else:
                     try:
                         price = ex_objs[e].fetch_ticker(ticker)
                     except Exception as err:
                         print(f"error fetching ticker: {err}")
+                        log.error(f"error fetching ticker: {err}")
                         success = False
                     if success:
                         ts = None
@@ -279,6 +302,7 @@ def request(exchanges,interval,db_n):
                         db_n.execute(statement)
                         db_n.commit()
                         print(f"inserted into {e} {curr} VALUE: {price['last']}")
+                        log.info(f"inserted into {e} {curr} VALUE: {price['last']}")
                 time.sleep(interval)
 
 # Thread method. Makes requests every interval seconds. 
@@ -308,6 +332,7 @@ def request_fast(exchanges,interval, chunk_size):
     # Start a thread for each chunk
     for chunk in chunks:
         print(f"creating thread for chunk {chunk}")
+        log.info(f"creating thread for chunk {chunk}")
         cThread = Thread(target=request_periodically, args=(chunk,interval))
         cThread.start()
         threads.append(cThread)
@@ -343,6 +368,7 @@ def request_history(exchange, currency, start_date, end_date):
             db_n.commit()
         l = len(tick)
         print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
+        log.info(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         start_date += 1e4 #leaving this hardcoded for now
         time.sleep(interval)
     
@@ -354,6 +380,7 @@ def request_history_periodically(histExchanges, currencies, start_date):
         hThread.start()
         history_threads.append(hThread)
         print(f"started thread for {h}")
+        log.info(f"started thread for {h}")
     return history_threads
 
 # Read the values stored in the config file and store them in memory.
@@ -378,11 +405,13 @@ def read_config():
                 pass #ignore comments
             elif setting_line[0] not in allowedFields and "#" not in setting_line[0]:
                 print(f"invalid config setting {setting_line[0]}")
+                log.error(f"invalid config setting {setting_line[0]}")
             elif setting_line[0] == "keepWeeks":
                 try:
                     keepWeeks = int(setting_line[1])
                 except Exception as e:
                     print(f"could not read keepWeeks field. Using default setting of {keepWeeks} weeks. Error: {e}")
+                    log.error(f"could not read keepWeeks field. Using default setting of {keepWeeks} weeks. Error: {e}")
             elif setting_line[0] == "exchanges":
                 exs = setting_line[1].split(" ")
                 for e in exs:
@@ -394,6 +423,7 @@ def read_config():
                         exchanges.append(e)
                     else:
                         print(f"{e} is not supported by ccxt!")
+                        log.error(f"{e} is not supported by ccxt!")
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
@@ -411,31 +441,37 @@ def read_config():
                     exchange_limit = int((setting_line[1].replace("\n", "")))
                 except TypeError:
                     print("invalid value in exchange_limit field. Must be int")
+                    log.error("invalid value in exchange_limit field. Must be int")
             elif setting_line[0] == "averaging_time":
                 try:
                     averaging_time = int((setting_line[1]).replace("\n", ""))
                 except TypeError:
                     print("invalid value in averaging_time field. Must be int (number of hours)")
+                    log.error("invalid value in averaging_time field. Must be int (number of hours)")
             elif setting_line[0] == "historicalExchanges":
                 hists = setting_line[1].split(" ")
                 for h in hists:
                     h = (h.replace("\n", ""))
                     historicalExchanges.append(h)
                 print(f"collecting history for {historicalExchanges}")
+                log.error(f"collecting history for {historicalExchanges}")
             elif setting_line[0] == "historyEnd":
                 try:
                     historyEnd = int((setting_line[1]).replace("\n", ""))
                 except TypeError:
                     print("invalid value in historyEnd. Must be ms timestamp (int)")
+                    log.error("invalid value in historyEnd. Must be ms timestamp (int)")
             else:
                 return
     #print statement for debugging
     len_exchanges = len(exchanges)
     if len_exchanges > exchange_limit:
         print(f"{len_exchanges} exchanges detected. Using performance mode (multithreading)")
+        log.info(f"{len_exchanges} exchanges detected. Using performance mode (multithreading)")
         performance_mode = True
 
     print(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}\n exchange_limit: {exchange_limit}\n averaging_time: {averaging_time}\n historicalExchanges: {historicalExchanges}\n historyEnd: {historyEnd}")
+    log.info(f" Settings read:\n keepWeeks: {keepWeeks}\n exchanges: {exchanges}\n currencies: {currencies}\n interval: {interval}\n exchange_limit: {exchange_limit}\n averaging_time: {averaging_time}\n historicalExchanges: {historicalExchanges}\n historyEnd: {historyEnd}")
 
 # Check for empty tables in the database
 def poke_db(exchanges):
@@ -449,6 +485,7 @@ def poke_db(exchanges):
         res = c.fetchone()
         if res == None:
             print(f"{e} table is empty!")
+            log.info(f"{e} table is empty!")
     score = (empties / len(exchanges))*100
     print(f"{score}% of tables are empty")
     return score
@@ -461,9 +498,11 @@ def install():
     #create the sqlite db
     len_exchanges = len(exchanges)
     print(f"creating tables for {len_exchanges} exchanges if they do not exist already.")
+    log.info(f"creating tables for {len_exchanges} exchanges if they do not exist already.")
     for exchange in exchanges:
         sql = f"CREATE TABLE IF NOT EXISTS {exchange} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER, datetime TEXT, pair TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL)"
         print(f"created table for {exchange}")
+        log.info(f"created table for {exchange}")
         db.execute(sql)
         db.commit()
     db.close()
@@ -500,9 +539,12 @@ if __name__ == "__main__":
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
-       threadResults = request_fast(exchanges, interval, chunk_size) 
+        print("performance mode is ON")
+        log.info("performance mode is ON")
+        threadResults = request_fast(exchanges, interval, chunk_size) 
     else:
         print("performance mode is OFF")
+        log.info("performance mode is OFF")
         prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
     request_history_periodically(historicalExchanges, currencies, historyEnd)
