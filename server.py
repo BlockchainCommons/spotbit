@@ -148,7 +148,12 @@ def now(currency, exchange):
         res = request_single(exchange, currency)
         db_n.close()
         if res != None:
-            return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+            dt = None
+            if res[0] % 1000 == 0:
+                dt = datetime.fromtimestamp(res[0]/1e3)
+            else:
+                dt = datetime.fromtimestamp(res[0])
+            return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
         else:
             return {'id': res}
 
