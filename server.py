@@ -148,12 +148,9 @@ def now(currency, exchange):
         res = request_single(exchange, currency)
         db_n.close()
         if res != None:
-            return res
+            return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
-            try:
-                return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
-            except Exception:
-                return {'id': res}
+            return {'id': res}
 
 # Find the mean of a list of two-value tuples
 def list_mean(input_list):
@@ -217,7 +214,7 @@ def request_single(exchange, currency):
         except Exception as e:
             print(f"got ratelimited on {e}")
             logging.error(f"got ratelimited on {e}")
-    return {'data': result[-1]}
+    return result[-1]
 
 
 # Make an HTTP GET request to exchanges via the ccxt API
