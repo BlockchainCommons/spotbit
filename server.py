@@ -31,6 +31,8 @@ performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
 historyEnd = 0
 score = 0 #the current percent of empty tables
+#the information regarding the current thread
+threadResults = None
 
 #Database
 p = Path("/home/spotbit/.spotbit/sb.db")
@@ -79,7 +81,15 @@ log.info(f"created list of {num_exchanges}")
 @app.route('/status')
 def status():
     global score
-    return f"{score}% of tables are empty. Server is running"
+    global threadResults
+    if performance_mode:
+        l = len(threadResults)
+        content = f"Threads: {l}"
+        for chunk, thread in threadResults:
+            html += f"{chunk} at memory address: {thread}"
+        return f"<html><p>{content}</p></html>"
+    else:
+        return "server is running"
 
 # configure the settings of Spotbit while the server is still running
 # send a GET request to this route to view current settings
