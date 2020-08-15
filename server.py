@@ -236,7 +236,7 @@ def request(exchanges,interval,db_n):
                     candle = None
                     tframe = '1m'
                     lim = 1e3
-                    if e == "bleutrade" or e == "btcalpha" or e == "rightbtc":
+                    if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
                         tframe = '1h'
                     if e == "poloniex":
                         tframe = '5m'
