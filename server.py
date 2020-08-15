@@ -156,7 +156,7 @@ def now(currency, exchange):
             cursor = db_n.execute(statement)
             db_n.commit()
             result_set.append(cursor.fetchone())
-        return {ticker: list_mean(result_set)}
+        return {'ticker': list_mean(result_set)}
     else:
         #make a direct request
         res = request_single(exchange, currency)
