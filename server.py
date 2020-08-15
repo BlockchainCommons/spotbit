@@ -265,20 +265,20 @@ def request(exchanges,interval,db_n):
                 if ex_objs[e].has['fetchOHLCV']:
                     candle = None
                     tframe = '1m'
-                    lim = 1e3
+                    lim = 1000
                     if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
                         tframe = '1h'
                     if e == "poloniex":
                         tframe = '5m'
                     # some exchanges have explicit limits on how many candles you can get at once
                     if e == "bitstamp":
-                        lim = 1e3
+                        lim = 1000
                     if e == "bybit":
                         lim = 200
                     if e == "eterbase":
-                        lim = 1e7
+                        lim = 1000000
                     if e == "exmo":
-                        lim = 3e3
+                        lim = 3000
                     if e == "bitfinex":
                         params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                         try:
@@ -342,7 +342,7 @@ def request(exchanges,interval,db_n):
                             else:
                                 ts = datetime.fromtimestamp(int(price['timestamp']))
                         except OverflowError as oe:
-                            print(f"{oe} caused by {ts})
+                            print(f"{oe} caused by {ts}")
                         ticker = ticker.replace("/", "-")
                         statement = f"INSERT INTO {e} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({price['timestamp']}, '{ts}', '{ticker}', 0.0, 0.0, 0.0, {price['last']}, 0.0);"
                         db_n.execute(statement)
