@@ -269,7 +269,7 @@ def request(exchanges,interval,db_n):
                     candle = None
                     tframe = '1m'
                     lim = 1000
-                    if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
+                    if e == "bleutrade" or e == "btcalpha or e == "rightbtc" or e == "hollaex":
                         tframe = '1h'
                     if e == "poloniex":
                         tframe = '5m'
@@ -282,6 +282,8 @@ def request(exchanges,interval,db_n):
                         lim = 1000000
                     if e == "exmo":
                         lim = 3000
+                    if e == "btcalpha":
+                        lim = 720
                     if e == "bitfinex":
                         params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                         try:
