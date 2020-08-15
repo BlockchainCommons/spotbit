@@ -77,6 +77,10 @@ num_exchanges = len(ex_objs)
 print(f"created list of {num_exchanges}")
 log.info(f"created list of {num_exchanges}")
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # TODO: create an html page to render here
 @app.route('/status')
 def status():
