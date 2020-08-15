@@ -235,10 +235,20 @@ def request(exchanges,interval,db_n):
                 if ex_objs[e].has['fetchOHLCV']:
                     candle = None
                     tframe = '1m'
+                    lim = 1e3
                     if e == "bleutrade" or e == "btcalpha" or e == "rightbtc":
                         tframe = '1h'
                     if e == "poloniex":
                         tframe = '5m'
+                    # some exchanges have explicit limits on how many candles you can get at once
+                    if e == "bitstamp":
+                        lim = 1e3
+                    if e == "bybit":
+                        lim = 200
+                    if e == "eterbase":
+                        lim = 1e7
+                    if e == "exmo":
+                        lim = 3e3
                     if e == "bitfinex":
                         params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                         try:
@@ -253,7 +263,7 @@ def request(exchanges,interval,db_n):
                             success = False
                     else:
                         try:
-                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
                             if candle == None:
                                 raise Exception(f"candle from {e} is nulll")
                         except Exception as err:
