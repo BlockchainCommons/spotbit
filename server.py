@@ -164,9 +164,9 @@ def now(currency, exchange):
         if res != None:
             dt = None
             if int(res[0]) % 1000 == 0:
-                dt = datetime.fromtimestamp(res[0]/1e3)
+                dt = datetime.fromtimestamp(int(res[0])/1e3)
             else:
-                dt = datetime.fromtimestamp(res[0])
+                dt = datetime.fromtimestamp(int(res[0]))
             return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
         else:
             return {'id': res}
