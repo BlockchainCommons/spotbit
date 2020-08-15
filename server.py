@@ -71,6 +71,12 @@ def is_supported(exchange):
         log.error(f"caught an error {e}")
         return False
 
+# Check if a timestamp has ms precision by modding by 1000
+def is_ms(timestamp):
+    if timestamp % 1000 == 0:
+        return True
+    return False
+
 # We create a list of all exchanges to do error checking on user input
 ex_objs = init_supported_exchanges()
 num_exchanges = len(ex_objs)
@@ -148,7 +154,7 @@ def now(currency, exchange):
             check_ms = f"SELECT timestamp FROM {e} LIMIT 1;"
             cursor = db_n.execute(check_ms)
             db_n.commit()
-            if int(cursor.fetchone()[0]) % 1000 == 0:
+            if is_ms(int(cursor.fetchone()[0])):
                 print(f"using ms precision for {e}")
                 logging.info(f"using ms precision for {e}")
                 ts_cutoff *= 1e3 
@@ -163,7 +169,7 @@ def now(currency, exchange):
         db_n.close()
         if res != None:
             dt = None
-            if int(res[0]) % 1000 == 0:
+            if is_ms(int(res[0])):
                 dt = datetime.fromtimestamp(int(res[0])/1e3)
             else:
                 dt = datetime.fromtimestamp(int(res[0]))
@@ -197,7 +203,17 @@ def hist(currency, exchange, date_start, date_end):
             date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
         except Exception:
             return "malformed dates. Use YYYY-MM-DDTHH:mm:SS or millisecond timestamps. Provide both dates in the same format"
-    statement = "SELECT * FROM {} WHERE timestamp > {} AND timestamp < {};".format(exchange, date_s, date_e)
+    # check the table we want to select from to see the precision of it
+    check = f"SELECT timestamp FROM {exchange} ORDER BY timestamp DESC LIMIT 1;"
+    cursor = db_n.execute(check)
+    statement = ""
+    if is_ms(int(cursor.fetchone())):
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e};"
+    else:
+        # for some exchanges we cannot use ms precision timestamps (such as coinbase)
+        date_s /= 1e3
+        date_e /= 1e3
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e};" 
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
@@ -320,7 +336,7 @@ def request(exchanges,interval,db_n):
                         success = False
                     if success:
                         ts = None
-                        if price['timestamp'] % 1000 == 0:
+                        if is_ms(int(price['timestamp'])):
                             ts = datetime.fromtimestamp(price['timestamp']/1e3)
                         else:
                             ts = datetime.fromtimestamp(price['timestamp'])
@@ -381,7 +397,7 @@ def request_history(exchange, currency, start_date, end_date):
             dt = None
             symbol = ticker.replace("/", "-")
             try:
-                if line['timestamp'] % 1000 == 0:
+                if is_ms(int(line['timestamp'])):
                     dt = datetime.fromtimestamp(line['timestamp'] / 1e3)
                 else:
                     dt = datetime.fromtimestamp(line['timestamp'])
@@ -548,7 +564,7 @@ def prune(keepWeeks):
                 cursor = db_n.execute(check)
                 check_ts = cursor.fetchone()
                 statement = ""
-                if int(check_ts) % 1000 == 0:
+                if is_ms(int(check_ts)):
                     cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
                     statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
                 else:
