@@ -51,6 +51,9 @@ echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
 echo 'HiddenServicePort 80 127.0.0.1:5000' >> /etc/tor/torrc
 echo 'HiddenServiceVersion 3' >> /etc/tor/torrc
 
+# add a systemd service for spotbit (created by @fonta1n3)
+cp spotbit.service /etc/systemd/system/spotbit.service
+
 # start the tor service after we're done
 echo "starting tor"
 systemctl daemon-reload
