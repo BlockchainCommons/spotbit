@@ -146,7 +146,8 @@ def now(currency, exchange):
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
             db_n.close()
-            return {'id': res}
+            pass
+            #return {'id': res, 'msg': 'no data found for this exchange'}
     elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
         result_set = []
         for e in exchanges:
@@ -161,7 +162,9 @@ def now(currency, exchange):
             statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
             db_n.commit()
-            result_set.append(cursor.fetchone())
+            result = cursor.fetchone()
+            if result != None:
+                result_set.append(result)
         return {'ticker': list_mean(result_set)}
     else:
         #make a direct request
@@ -225,7 +228,7 @@ def hist(currency, exchange, date_start, date_end):
 # It will probably not be used for /hist because of the length of time getting arbitrary amounts of historical data can be
 def request_single(exchange, currency):
     if not is_supported(exchange):
-        return "{} is not supported by CCXT".format(exchange)
+        return f"{exchange} is not supported by CCXT"
     obj = ex_objs[exchange]
     ticker = "BTC/{}".format(currency.upper())
     if obj.has['fetchOHLCV']:
