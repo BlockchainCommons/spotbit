@@ -163,7 +163,7 @@ def now(currency, exchange):
         db_n.close()
         if res != None:
             dt = None
-            if res[0] % 1000 == 0:
+            if int(res[0]) % 1000 == 0:
                 dt = datetime.fromtimestamp(res[0]/1e3)
             else:
                 dt = datetime.fromtimestamp(res[0])
