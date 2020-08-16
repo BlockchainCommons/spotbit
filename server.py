@@ -155,16 +155,17 @@ def now(currency, exchange):
             check_ms = f"SELECT timestamp FROM {e} LIMIT 1;"
             cursor = db_n.execute(check_ms)
             db_n.commit()
-            if is_ms(int(cursor.fetchone()[0])):
+            ts = cursor.fetchone()
+            if ts != None and is_ms(int(ts[0])):
                 print(f"using ms precision for {e}")
                 logging.info(f"using ms precision for {e}")
                 ts_cutoff *= 1e3 
-            statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} ORDER BY timestamp LIMIT 1;"
+            statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} AND pair = '{ticker}' ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
             db_n.commit()
             result = cursor.fetchone()
             if result != None:
-                result_set.append(result)
+                result_set.append(result[1])
         return {'ticker': list_mean(result_set)}
     else:
         #make a direct request
@@ -182,9 +183,9 @@ def now(currency, exchange):
 
 # Find the mean of a list of two-value tuples
 def list_mean(input_list):
-    avg = 0
+    avg = 0.0
     for l in input_list:
-        avg += l[1]
+        avg += l
     return avg/len(input_list)
 
 # Get data from local storage inside of a certain range.
