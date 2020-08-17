@@ -19,7 +19,7 @@ logFileHandler.setLevel(logging.DEBUG)
 log.addHandler(logFileHandler)
 #Config Settings
 allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time", "historicalExchanges", "historyEnd"]
-configPath = Path("/home/spotbit/.spotbit/spotbit.config").expanduser()
+configPath = Path("/home/spotbit/.spotbit/spotbit.config")
 #Default values; these will be overwritten when the config file is read
 exchanges = []
 historicalExchanges = [] # exchanges that we want the history of
@@ -196,6 +196,7 @@ def list_mean(input_list):
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
 def hist(currency, exchange, date_start, date_end):
     db_n = sqlite3.connect(p, timeout=10)
+    ticker = "BTC-{}".format(currency.upper())
     #check what format of dates we have
     if (str(date_start)).isdigit():
         date_s = int(date_start)         
@@ -211,17 +212,18 @@ def hist(currency, exchange, date_start, date_end):
     check = f"SELECT timestamp FROM {exchange} ORDER BY timestamp DESC LIMIT 1;"
     cursor = db_n.execute(check)
     statement = ""
-    if is_ms(int(cursor.fetchone())):
-        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e};"
+    ts = cursor.fetchone()
+    if ts != None and is_ms(int(ts[0])):
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';"
     else:
         # for some exchanges we cannot use ms precision timestamps (such as coinbase)
         date_s /= 1e3
         date_e /= 1e3
-        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e};" 
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';" 
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
-    return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'close', 'vol'], 'data':res}
+    return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'vol'], 'data':res}
 
 
 # Make a single request, without having to loop through all exchanges and currency pairs.
