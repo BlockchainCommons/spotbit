@@ -238,6 +238,24 @@ def request_single(exchange, currency):
     obj = ex_objs[exchange]
     ticker = "BTC/{}".format(currency.upper())
     if obj.has['fetchOHLCV']:
+        tframe = '1m'
+        # drop all this in a separate method
+        lim = 1000
+        if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
+            tframe = '1h'
+        if e == "poloniex":
+            tframe = '5m'
+        # some exchanges have explicit limits on how many candles you can get at once
+        if e == "bitstamp":
+            lim = 1000
+        if e == "bybit":
+            lim = 200
+        if e == "eterbase":
+            lim = 1000000
+        if e == "exmo":
+            lim = 3000
+        if e == "btcalpha":
+            lim = 720
         result = None
         if exchange == "bitfinex": #other exchanges requiring special conditions: bitstamp, bitmart
             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
@@ -248,7 +266,7 @@ def request_single(exchange, currency):
                 logging.error(f"got an error requesting to {exchange}: {e}")
         else:
             try:
-                result = obj.fetch_ohlcv(ticker, timeframe='1m')
+                result = obj.fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, limit=lim)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
                 logging.error(f"got an error requesting to {exchange}: {e}")
