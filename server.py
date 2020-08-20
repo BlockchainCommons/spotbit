@@ -241,20 +241,20 @@ def request_single(exchange, currency):
         tframe = '1m'
         # drop all this in a separate method
         lim = 1000
-        if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
+        if exchange == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
             tframe = '1h'
-        if e == "poloniex":
+        if exchange == "poloniex":
             tframe = '5m'
         # some exchanges have explicit limits on how many candles you can get at once
-        if e == "bitstamp":
+        if exchange == "bitstamp":
             lim = 1000
-        if e == "bybit":
+        if exchange == "bybit":
             lim = 200
-        if e == "eterbase":
+        if exchange == "eterbase":
             lim = 1000000
-        if e == "exmo":
+        if exchange == "exmo":
             lim = 3000
-        if e == "btcalpha":
+        if exchange == "btcalpha":
             lim = 720
         result = None
         if exchange == "bitfinex": #other exchanges requiring special conditions: bitstamp, bitmart
