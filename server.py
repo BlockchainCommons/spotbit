@@ -146,7 +146,7 @@ def now(currency, exchange):
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
             db_n.close()
-            return {'id': res, 'msg': 'no data found for this exchange'}
+            fallback_to_direct(exchange, currency, db_n)
     elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
         result_set = []
         for e in exchanges:
@@ -167,18 +167,22 @@ def now(currency, exchange):
                 result_set.append(result[1])
         return {'ticker': list_mean(result_set)}
     else:
-        #make a direct request
-        res = request_single(exchange, currency)
-        db_n.close()
-        if res != None:
-            dt = None
-            if is_ms(int(res[0])):
-                dt = datetime.fromtimestamp(int(res[0])/1e3)
-            else:
-                dt = datetime.fromtimestamp(int(res[0]))
-            return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
+        fallback_to_direct(exchange, currency, db_n)
+
+# This method will directly request an exchange that is supported but who's table is also empty
+def fallback_to_direct(exchange, currency, db_n):
+    #make a direct request
+    res = request_single(exchange, currency)
+    db_n.close()
+    if res != None:
+        dt = None
+        if is_ms(int(res[0])):
+            dt = datetime.fromtimestamp(int(res[0])/1e3)
         else:
-            return {'id': res}
+            dt = datetime.fromtimestamp(int(res[0]))
+        return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
+    else:
+        return {'id': res}
 
 # Find the mean of a list of two-value tuples
 def list_mean(input_list):
