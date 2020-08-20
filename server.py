@@ -146,8 +146,7 @@ def now(currency, exchange):
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
             db_n.close()
-            pass
-            #return {'id': res, 'msg': 'no data found for this exchange'}
+            return {'id': res, 'msg': 'no data found for this exchange'}
     elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
         result_set = []
         for e in exchanges:
