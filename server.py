@@ -146,7 +146,7 @@ def now(currency, exchange):
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
             db_n.close()
-            fallback_to_direct(exchange, currency, db_n)
+            return fallback_to_direct(exchange, currency, db_n)
     elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
         result_set = []
         for e in exchanges:
@@ -167,11 +167,12 @@ def now(currency, exchange):
                 result_set.append(result[1])
         return {'ticker': list_mean(result_set)}
     else:
-        fallback_to_direct(exchange, currency, db_n)
+        return fallback_to_direct(exchange, currency, db_n)
 
 # This method will directly request an exchange that is supported but who's table is also empty
 def fallback_to_direct(exchange, currency, db_n):
     #make a direct request
+    ticker = "BTC-{}".format(currency.upper())
     res = request_single(exchange, currency)
     db_n.close()
     if res != None:
@@ -241,7 +242,7 @@ def request_single(exchange, currency):
         tframe = '1m'
         # drop all this in a separate method
         lim = 1000
-        if exchange == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
+        if exchange == "bleutrade" or exchange == "btcalpha" or exchange == "rightbtc" or exchange == "hollaex":
             tframe = '1h'
         if exchange == "poloniex":
             tframe = '5m'
@@ -260,13 +261,13 @@ def request_single(exchange, currency):
         if exchange == "bitfinex": #other exchanges requiring special conditions: bitstamp, bitmart
             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
             try:
-                result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, params=params)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
                 logging.error(f"got an error requesting to {exchange}: {e}")
         else:
             try:
-                result = obj.fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, limit=lim)
+                result = obj.fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
                 logging.error(f"got an error requesting to {exchange}: {e}")
