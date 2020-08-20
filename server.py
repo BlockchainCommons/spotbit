@@ -545,6 +545,44 @@ def poke_db(exchanges):
     print(f"{score}% of tables are empty")
     return score
 
+# Find gaps in an exchanges database back to historyEnd and create a list of those gaps as tuples
+def find_gaps(exchange, currency):
+    global historyEnd
+    db_n = sqlite3.connect(p)
+    currency = currency.upper()
+    ticker = f"BTC-{currency}"
+    statement = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+    c = db_n.execute(statement)
+    res = c.fetchone()
+    if res != None and is_ms(int(res[0])):
+        statement = f"SELECT timestamp,datetime FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {historyEnd} ORDER BY timestamp;"
+    else:
+        statement = f"SELECT timestamp, datetime FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {historyEnd / 1e3} ORDER BY timestamp;"
+    c = db_n.execute(statement)
+    res = c.fetchall()
+    report = {}
+    # later in time is higer ids
+    i = 0
+    key = 0
+    stop = len(res)
+    #make the time gap a configurable param
+    while i < stop-1:
+        if res[i+1][0] > res[i][0]+1000000:
+            #report.append((res[i], res[i+1]))
+            report[key] = f"{res[i][0]}-{res[i+1][0]}"
+            key +=1
+        i += 1
+    return report
+
+# Fill gaps in a table via request_history
+def backfill(report, exchange, currency):
+    for key in report:
+        print(f"filling gap {key}")
+        rang = report[key].split("-")
+        start = int(rang[0])
+        end = int(rang[1])
+        request_history(exchange, currency, start, end)
+
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
 # Tables are only created if they do not already exist. Install will attempt to create tables for every listed exchange at once when called.
