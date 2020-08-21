@@ -274,10 +274,20 @@ def request_single(exchange, currency):
     else:
         try:
             result = obj.fetch_ticker(ticker)
+            dt = None
+            if result != None and is_ms(result['timestamp']) == False:
+                dt = datetime.fromtimestamp(result['timestamp'])
+            else:
+                dt = datetime.fromtimestamp(result['timestamp'] / 1e3)
+            if result != None:
+                return {'close': result['close'], 'symbol': ticker, 'timestamp': result['timestamp'], 'datetime': dt, 'volume': result['bidVolume']+result['askVolume'], 'id': 'on_demand'}
         except Exception as e:
             print(f"got ratelimited on {e}")
             logging.error(f"got ratelimited on {e}")
-    return result[-1]
+    if result != None:
+        return result[-1]
+    else:
+        return "no data"
 
 
 # Make an HTTP GET request to exchanges via the ccxt API
