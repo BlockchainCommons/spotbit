@@ -176,12 +176,7 @@ def fallback_to_direct(exchange, currency, db_n):
     res = request_single(exchange, currency)
     db_n.close()
     if res != None:
-        dt = None
-        if is_ms(int(res[0])):
-            dt = datetime.fromtimestamp(int(res[0])/1e3)
-        else:
-            dt = datetime.fromtimestamp(int(res[0]))
-        return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
+        return res
     else:
         return {'id': res}
 
@@ -238,6 +233,7 @@ def request_single(exchange, currency):
         return f"{exchange} is not supported by CCXT"
     obj = ex_objs[exchange]
     ticker = "BTC/{}".format(currency.upper())
+    dt = None
     if obj.has['fetchOHLCV']:
         tframe = '1m'
         # drop all this in a separate method
@@ -274,18 +270,22 @@ def request_single(exchange, currency):
     else:
         try:
             result = obj.fetch_ticker(ticker)
-            dt = None
             if result != None and is_ms(result['timestamp']) == False:
                 dt = datetime.fromtimestamp(result['timestamp'])
             else:
                 dt = datetime.fromtimestamp(result['timestamp'] / 1e3)
             if result != None:
-                return {'close': result['close'], 'symbol': ticker, 'timestamp': result['timestamp'], 'datetime': dt, 'volume': result['bidVolume']+result['askVolume'], 'id': 'on_demand'}
+                return {'close': result['close'], 'symbol': ticker, 'timestamp': result['timestamp'], 'datetime': dt, 'volume': result['bidVolume'], 'id': 'on_demand'}
         except Exception as e:
             print(f"got ratelimited on {e}")
             logging.error(f"got ratelimited on {e}")
     if result != None:
-        return result[-1]
+        res = result[-1]
+        if is_ms(res[0]):
+            dt = datetime.fromtimestamp(res[0]/1e3)
+        else:
+            dt = datetime.fromtimestamp(res[0])
+        return {'id': 'on_demand', 'timestamp': res[0], 'datetime': dt, 'currency_pair': ticker, 'open': res[1], 'high': res[2], 'low': res[3], 'close': res[4], 'vol': res[5]}
     else:
         return "no data"
 
