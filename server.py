@@ -481,6 +481,7 @@ def read_config():
     global exchange_limit
     global historicalExchanges
     global historyEnd
+    global keepWeeks
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
