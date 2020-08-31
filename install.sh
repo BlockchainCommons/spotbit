@@ -14,15 +14,33 @@ then
 
 fi
 
+#  To use source lines with https:// in /etc/apt/sources.list the apt-transport-https package is required. Install it with:
+# install the dependencies to build python3.8 on debian
+sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release
+################################################################################################################################
+# install python 3.8 if its not already
+PYTHON_VERSION=$(python3 --version | cut -c 8-12)
+if [PYTHON_VERSION != "3.8.0"]
+then
+  wget https://www.python.org/ftp/python/3.8.0/Python-3.8.0.tgz
+  tar -xvf Python-3.8.0.tgz
+  cd Python-3.8.0
+  ./configure
+  make
+  sudo make install 
+  # set python3.8 to the default python3 and move the old python3 to a different location
+  sudo cp /usr/bin/python3 /usr/bin/python$PYTHON_VERSION
+  sudo cp /usr/bin/python3.8 /usr/bin/python3
+fi
+################################################################################################################################
+
 # install python dependencies
 # need to force python3.8 as well
 # TODO: compile and install python3.8
-pip3.8 install -r requirements.txt
+pip3 install -r requirements.txt
 
 ################################################################################################################################
 #install tor - Below lines taken from Bitcoin standup
-#  To use source lines with https:// in /etc/apt/sources.list the apt-transport-https package is required. Install it with:
-sudo apt install apt-transport-https
 # We need to set up our package repository before you can fetch Tor. First, you need to figure out the name of your distribution:
 DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 # You need to add the following entries to /etc/apt/sources.list:
