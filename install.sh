@@ -60,14 +60,23 @@ sudo apt install tor deb.torproject.org-keyring
 /usr/sbin/useradd -m -p `perl -e 'printf("%s\n",crypt($ARGV[0],"spotbit"))' "spotbit"` -g sudo -s /bin/bash spotbit
 /usr/sbin/adduser spotbit sudo
 echo "created spotbit user in sudo group"
-
+# Use sed to setup torrc so that the install script can be run multiple times without causing issues (taken from blockchain commons bitcoin standup scripts)
+sed -i -e 's/#ControlPort 9051/ControlPort 9051/g' /etc/tor/torrc
+sed -i -e 's/#CookieAuthentication 1/CookieAuthentication 1/g' /etc/tor/torrc
+sed -i -e 's/## address y:z./## address y:z.\
+\
+HiddenServiceDir \/var\/lib\/tor\/standup\/\
+HiddenServiceVersion 3\
+HiddenServicePort 1309 127.0.0.1:18332\
+HiddenServicePort 1309 127.0.0.1:18443\
+HiddenServicePort 1309 127.0.0.1:8332/g' /etc/tor/torrc
 mkdir /var/lib/tor/Spotbit
 chown -R debian-tor:debian-tor /var/lib/tor/Spotbit
 chmod 700 /var/lib/tor/Spotbit
-echo '# setup for Spotbit service' >> /etc/tor/torrc
-echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
-echo 'HiddenServicePort 80 127.0.0.1:5000' >> /etc/tor/torrc
-echo 'HiddenServiceVersion 3' >> /etc/tor/torrc
+#echo '# setup for Spotbit service' >> /etc/tor/torrc
+#echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
+#echo 'HiddenServicePort 80 127.0.0.1:5000' >> /etc/tor/torrc
+#echo 'HiddenServiceVersion 3' >> /etc/tor/torrc
 
 # add a systemd service for spotbit (created by @fonta1n3)
 cp spotbit.service /etc/systemd/system/spotbit.service
