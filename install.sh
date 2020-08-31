@@ -16,11 +16,11 @@ fi
 
 #  To use source lines with https:// in /etc/apt/sources.list the apt-transport-https package is required. Install it with:
 # install the dependencies to build python3.8 on debian
-sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release
+sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release libssl-dev libsqlite3-dev
 ################################################################################################################################
 # install python 3.8 if its not already
 PYTHON_VERSION=$(python3 --version | cut -c 8-12)
-if [PYTHON_VERSION != "3.8.0"]
+if [ "$PYTHON_VERSION" != "3.8.0" ]
 then
   wget https://www.python.org/ftp/python/3.8.0/Python-3.8.0.tgz
   tar -xvf Python-3.8.0.tgz
