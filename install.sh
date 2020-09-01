@@ -110,7 +110,10 @@ systemctl daemon-reload
 echo "done"
 
 python3 configure.py
-
+# add spotbit to the root group and make its source dir owned by this group
+sudo gpasswd -a spotbit root
+sudo chown -R spotbit:root /home/spotbit/source
+sudo chown -R g+w /home/spotbit/source 
 # show the URL of the hidden service
 echo "waiting 2 minutes for tor to finish bootstrapping."
 sleep 2m
