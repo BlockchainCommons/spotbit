@@ -40,7 +40,7 @@ fi
 # need to force python3.8 as well
 # TODO: compile and install python3.8
 echo "installing python dependencies..."
-pip3 install -r requirements.txt
+pip3 install -r ./requirements.txt
 echo "done"
 
 ################################################################################################################################
@@ -72,7 +72,7 @@ sed -i -e 's/#ControlPort 9051/ControlPort 9051/g' /etc/tor/torrc
 sed -i -e 's/#CookieAuthentication 1/CookieAuthentication 1/g' /etc/tor/torrc
 sed -i -e 's/## address y:z./## address y:z.\
 \
-HiddenServiceDir \/var\/lib\/tor\/standup\/\
+HiddenServiceDir \/var\/lib\/tor\/Spotbit\/\
 HiddenServiceVersion 3\
 HiddenServicePort 80 127.0.0.1:5000/g' /etc/tor/torrc
 mkdir /var/lib/tor/Spotbit
@@ -82,7 +82,7 @@ echo "done"
 
 # add a systemd service for spotbit (created by @fonta1n3)
 echo "creating systemd service..."
-cp spotbit.service /etc/systemd/system/spotbit.service
+cp ./spotbit.service /etc/systemd/system/
 echo "done"
 
 # start the tor service after we're done
