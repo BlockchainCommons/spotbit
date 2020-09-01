@@ -37,6 +37,9 @@ To run the server, run `python3.8 server.py`. Spotbit will then start making htt
     * `/configure`
         - Shows the current config settings for this server, including what exchanges and currencies are supported.
 
+#### Test Server
+If you want to test out the server without running one yourself, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
+
 #### Config Options
 Spotbbit uses a config file located at `~/.spotbit/spotbit.config` to change settings. The allowed fields are:
     * `keepWeeks`

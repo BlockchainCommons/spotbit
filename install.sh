@@ -105,7 +105,7 @@ fi
 # move source code to the spotbit user dir
 echo "copying source to /home/spotbit/source..."
 sudo mkdir /home/spotbit/source
-cp ./* /home/spotbit/source/
+cp -r ./* /home/spotbit/source/
 echo "done"
 
 # show the URL of the hidden service
