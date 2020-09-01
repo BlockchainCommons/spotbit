@@ -7,7 +7,7 @@ After=tor.service
 WorkingDirectory=/home/spotbit/source
 ExecStart=/usr/local/bin/python3 /home/spotbit/source/server.py
 User=spotbit
-Group=sudo
+Group=root
 Type=simple
 
 [Install]
