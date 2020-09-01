@@ -22,6 +22,7 @@ sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g
 PYTHON_VERSION=$(python3 --version | cut -c 8-12)
 if [ "$PYTHON_VERSION" != "3.8.0" ]
 then
+  echo "Python3 is being upgraded to 3.8"
   wget https://www.python.org/ftp/python/3.8.0/Python-3.8.0.tgz
   tar -xvf Python-3.8.0.tgz
   cd Python-3.8.0
@@ -31,17 +32,21 @@ then
   # set python3.8 to the default python3 and move the old python3 to a different location
   sudo cp /usr/bin/python3 /usr/bin/python$PYTHON_VERSION
   sudo cp /usr/bin/python3.8 /usr/bin/python3
+  echo "done"
 fi
 ################################################################################################################################
 
 # install python dependencies
 # need to force python3.8 as well
 # TODO: compile and install python3.8
+echo "installing python dependencies..."
 pip3 install -r requirements.txt
+echo "done"
 
 ################################################################################################################################
 #install tor - Below lines taken from Bitcoin standup
 # We need to set up our package repository before you can fetch Tor. First, you need to figure out the name of your distribution:
+echo "installing tor..."
 DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 # You need to add the following entries to /etc/apt/sources.list:
 cat >> /etc/apt/sources.list << EOF
@@ -55,12 +60,14 @@ sudo gpg --export A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 | apt-key add -
 # Update system, install and run tor as a service
 sudo apt update
 sudo apt install tor deb.torproject.org-keyring
+echo "done"
 ################################################################################################################################
 # Configure the Spotbit user
 /usr/sbin/useradd -m -p `perl -e 'printf("%s\n",crypt($ARGV[0],"spotbit"))' "spotbit"` -g sudo -s /bin/bash spotbit
 /usr/sbin/adduser spotbit sudo
 echo "created spotbit user in sudo group"
 # Use sed to setup torrc so that the install script can be run multiple times without causing issues (taken from blockchain commons bitcoin standup scripts)
+echo "configuring tor..."
 sed -i -e 's/#ControlPort 9051/ControlPort 9051/g' /etc/tor/torrc
 sed -i -e 's/#CookieAuthentication 1/CookieAuthentication 1/g' /etc/tor/torrc
 sed -i -e 's/## address y:z./## address y:z.\
@@ -71,13 +78,12 @@ HiddenServicePort 80 127.0.0.1:5000/g' /etc/tor/torrc
 mkdir /var/lib/tor/Spotbit
 chown -R debian-tor:debian-tor /var/lib/tor/Spotbit
 chmod 700 /var/lib/tor/Spotbit
-#echo '# setup for Spotbit service' >> /etc/tor/torrc
-#echo 'HiddenServiceDir /var/lib/tor/Spotbit' >> /etc/tor/torrc
-#echo 'HiddenServicePort 80 127.0.0.1:5000' >> /etc/tor/torrc
-#echo 'HiddenServiceVersion 3' >> /etc/tor/torrc
+echo "done"
 
 # add a systemd service for spotbit (created by @fonta1n3)
+echo "creating systemd service..."
 cp spotbit.service /etc/systemd/system/spotbit.service
+echo "done"
 
 # start the tor service after we're done
 echo "starting tor"
@@ -93,7 +99,14 @@ else
   mkdir /home/spotbit/.spotbit
   touch /home/spotbit/.spotbit/spotbit.config
   cat spotbit_example.config >> /home/spotbit/.spotbit/spotbit.config
+  echo "You are currently using the default config. To change this, edit /home/spotbit/.spotbit/spotbit.config"
 fi
+
+# move source code to the spotbit user dir
+echo "copying source to /home/spotbit/source..."
+sudo mkdir /home/spotbit/source
+cp ./* /home/spotbit/source/
+echo "done"
 
 # show the URL of the hidden service
 echo "waiting 2 minutes for tor to finish bootstrapping."
