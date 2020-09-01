@@ -16,7 +16,7 @@ fi
 
 #  To use source lines with https:// in /etc/apt/sources.list the apt-transport-https package is required. Install it with:
 # install the dependencies to build python3.8 on debian
-sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release libssl-dev libsqlite3-dev
+sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release libssl-dev libsqlite3-dev libffi-dev
 ################################################################################################################################
 # install python 3.8 if its not already
 PYTHON_VERSION=$(python3 --version | cut -c 8-12)
@@ -67,9 +67,7 @@ sed -i -e 's/## address y:z./## address y:z.\
 \
 HiddenServiceDir \/var\/lib\/tor\/standup\/\
 HiddenServiceVersion 3\
-HiddenServicePort 1309 127.0.0.1:18332\
-HiddenServicePort 1309 127.0.0.1:18443\
-HiddenServicePort 1309 127.0.0.1:8332/g' /etc/tor/torrc
+HiddenServicePort 80 127.0.0.1:5000/g' /etc/tor/torrc
 mkdir /var/lib/tor/Spotbit
 chown -R debian-tor:debian-tor /var/lib/tor/Spotbit
 chmod 700 /var/lib/tor/Spotbit
