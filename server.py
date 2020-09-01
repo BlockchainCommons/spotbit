@@ -34,11 +34,18 @@ score = 0 #the current percent of empty tables
 #the information regarding the current thread
 threadResults = None
 
-#Database
 p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
+
+# Database configuration
+# We need to have the database opened manually once so that systemd can access it
+def configure_db():
+    p = Path("/home/spotbit/.spotbit/sb.db")
+    db = sqlite3.connect(p)
+    print(f"db opened in {p}")
+    log.debug(f"db opened in {p}")
 app = Flask(__name__)
 
 # split up the number of exchanges per chunk based on how many cpu cores are available

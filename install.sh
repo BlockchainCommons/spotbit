@@ -106,7 +106,10 @@ fi
 echo "copying source to /home/spotbit/source..."
 sudo mkdir /home/spotbit/source
 cp -r ./* /home/spotbit/source/
+systemctl daemon-reload
 echo "done"
+
+python3 configure.py
 
 # show the URL of the hidden service
 echo "waiting 2 minutes for tor to finish bootstrapping."
