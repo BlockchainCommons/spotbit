@@ -653,7 +653,7 @@ def prune(keepWeeks):
                 cursor = db_n.execute(check)
                 check_ts = cursor.fetchone()
                 statement = ""
-                if is_ms(int(check_ts)):
+                if check_ts != None and is_ms(int(check_ts[0])):
                     cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
                     statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
                 else:
@@ -668,7 +668,6 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    #score = poke_db(exchanges)
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
@@ -681,8 +680,8 @@ if __name__ == "__main__":
         prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
     request_history_periodically(historicalExchanges, currencies, historyEnd)
-    #pruning_thread = Thread(target=prune, args=[keepWeeks])
-    #pruning_thread.start()
+    pruning_thread = Thread(target=prune, args=[keepWeeks])
+    pruning_thread.start()
     app.run()
     db.close()
 
