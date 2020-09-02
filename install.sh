@@ -14,6 +14,12 @@ then
 
 fi
 
+# touch all the required files in the directory to make sure they can be seen later
+touch requirements.txt
+touch configure.py
+touch spotbit.service
+touch spotbit_example.config
+
 #  To use source lines with https:// in /etc/apt/sources.list the apt-transport-https package is required. Install it with:
 # install the dependencies to build python3.8 on debian
 sudo apt install apt-transport-https build-essential wget python3-openssl zlib1g-dev lsb-release libssl-dev libsqlite3-dev libffi-dev
@@ -49,10 +55,12 @@ echo "done"
 echo "installing tor..."
 DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 # You need to add the following entries to /etc/apt/sources.list:
-cat >> /etc/apt/sources.list << EOF
-deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
-deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
-EOF
+#cat >> /etc/apt/sources.list << EOF
+#deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
+#deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
+#EOF
+sudo grep -qxF 'deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' /etc/apt/sources.list || echo 'deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' >> /etc/apt/sources.list
+sudo grep -qxF 'deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' /etc/apt/sources.list || echo 'deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' >> /etc/apt/sources.list
 # Then add the gpg key used to sign the packages by running:
 sudo apt-key adv --recv-keys --keyserver keys.gnupg.net  74A941BA219EC810
 sudo wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc | gpg --import
