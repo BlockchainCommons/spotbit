@@ -1,5 +1,6 @@
 #!/bin/bash
-
+cd "$(dirname "$0")"
+pwd
 # Install script for Spotbit
 # By Christian Murray
 # Blockchain Commons
@@ -59,8 +60,8 @@ DEBIAN_VERSION=$(lsb_release -c | awk '{ print $2 }')
 #deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
 #deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main
 #EOF
-sudo grep -qxF 'deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' /etc/apt/sources.list || echo 'deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' >> /etc/apt/sources.list
-sudo grep -qxF 'deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' /etc/apt/sources.list || echo 'deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main' >> /etc/apt/sources.list
+sudo grep -qxF "deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main" /etc/apt/sources.list || echo "deb https://deb.torproject.org/torproject.org $DEBIAN_VERSION main" >> /etc/apt/sources.list
+sudo grep -qxF "deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main" /etc/apt/sources.list || echo "deb-src https://deb.torproject.org/torproject.org $DEBIAN_VERSION main" >> /etc/apt/sources.list
 # Then add the gpg key used to sign the packages by running:
 sudo apt-key adv --recv-keys --keyserver keys.gnupg.net  74A941BA219EC810
 sudo wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc | gpg --import
