@@ -26,7 +26,7 @@ historicalExchanges = [] # exchanges that we want the history of
 currencies = []
 interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
-exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
+exchange_limit = 200 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
 historyEnd = 0
@@ -464,6 +464,7 @@ def request_history(exchange, currency, start_date, end_date):
         print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         log.info(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         start_date += 1e4 #leaving this hardcoded for now
+        start_date = int(start_date)
         time.sleep(interval)
     
 # Create a thread for each exchange that needs history.
