@@ -654,14 +654,15 @@ def prune(keepWeeks):
                 cursor = db_n.execute(check)
                 check_ts = cursor.fetchone()
                 statement = ""
-                if check_ts != None and is_ms(int(check_ts[0])):
-                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
-                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-                else:
-                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
-                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-                db_n.execute(statement)
-                db_n.commit()
+                if check_ts != None
+                    if is_ms(int(check_ts[0])):
+                        cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
+                        statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                    else:
+                        cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
+                        statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                    db_n.execute(statement)
+                    db_n.commit()
         time.sleep(60000)
     
 
