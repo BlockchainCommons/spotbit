@@ -654,7 +654,7 @@ def prune(keepWeeks):
                 cursor = db_n.execute(check)
                 check_ts = cursor.fetchone()
                 statement = ""
-                if check_ts != None
+                if check_ts != None:
                     if is_ms(int(check_ts[0])):
                         cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
                         statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
