@@ -11,19 +11,19 @@
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
 ### Installation and Usage
-#### Fully Manual Install
-Spotbit is still under development, but it is currently working in a very limited sense. If you want to install it, first clone the development github branch. Then, install the required libraries via `pip install <LIBRARY>`. The code works on Linux (tested on Ubuntu 18.04), probably works on Mac, and is not currently supported on Windows. Finally, create a directory called `.spotbit` in your home folder. Copy `spotbit.config` to this directory from the Documentation branch. 
 
 #### Script Install
 The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. The script must be run as root; it will exit if the current user does not run it with `sudo`. 
 
-`install.sh` will do three things: create the ~/.spotbit directory in the user's home folder, copy the default config into the file ~/.spotbit/spotbit.config, download and install Tor, then create a Spotbit hidden service, then install the dependencies listed in `requirements.txt` via pip. 
+`install.sh` will set up your system to run spotbit. First, it checks if Python3.8 is being used on your system. Many linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile and install python3.8 for you.
 
-You need the following for the script to run properly: python version 3.8 or higher and a properly configured pip alias. If python3.8 is the only version of python on your system, then this is already done. However, on systems with multiple versions of python the command `pip` likely is mapped to a different version of python. You may need to add an alias that sets pip3 or pip3.8 (depending on the system) to pip in your bashrc.
+Then the installer will install the required python3 libraries via pip. These are `ccxt` and `flask`. 
+
+After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/Spotbit`. The source code will be copied to `/home/spotbit/source`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when spotbit runs. Finally, a systemd service will be copied to `/etc/systemd/system`. 
 
 The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
 
-To run the server, run `python3.8 server.py`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
+To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
     * `/status`
         - Returns a string message if the server is running
     * `/now/<currency>/<exchange>`
@@ -36,12 +36,16 @@ To run the server, run `python3.8 server.py`. Spotbit will then start making htt
         - If the exchange is not present in your config file, then no data is returned.
     * `/configure`
         - Shows the current config settings for this server, including what exchanges and currencies are supported.
+    * `/`
+        - Shows a landing page with info about spotbit.
+
+You can check on a spotbit's status at any time by running `sudo systemctl status spotbit`, or take a look at the log file in `/home/spotbit/source/spotbit.log`. 
 
 #### Test Server
 If you want to test out the server without running one yourself, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
 
 #### Config Options
-Spotbbit uses a config file located at `~/.spotbit/spotbit.config` to change settings. The allowed fields are:
+Spotbbit uses a config file located at `/home/spotbit/.spotbit/spotbit.config` to change settings. The allowed fields are:
     * `keepWeeks`
         - The number of weeks worth of data to keep in the database for exchanges that you are not retrieving history for. This setting does not apply to exchanges that have a long term history.
     * `exchanges`
@@ -51,7 +55,7 @@ Spotbbit uses a config file located at `~/.spotbit/spotbit.config` to change set
     * `interval`
         - The time in seconds spotbit should wait between making GET requests to API servers. This value should be between 5-15 seconds for best results.
     * `exchange_limit`
-        - The number of exchanges to allow to be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Set the threshold higher if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported.
+        - The number of exchanges to allow to be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Set the threshold higher if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported. THE MULTITHREADING IS STILL POORLY TESTED AND MAY NOT BEHAVE PROPERLY. OMITTING THIS IS PREFERRED.
     * `averaging_time`
         - The time window in hours that Spotbit will consider "current" when calculating an average price. It is useful to set this to at least an hour or so if you are supporting several dozen or more exchanges, because in these situations some exchanges may occasionally fall slightly behind in the request queue, depending on what you have set as your `interval` and `exchange_limit`.
     * `historicalExchanges`
@@ -81,10 +85,9 @@ To build  Spotbit you'll need to use the following tools:
 - Python3.8 or higher
 - Pip
 - Flask
-- Celery
 - CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
 
-All of these Python libraries can be installed via pip. 
+All of these Python libraries can be installed via pip and Python3.8 can be installed for you in the install script.
 
 ### Motivation
 Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
