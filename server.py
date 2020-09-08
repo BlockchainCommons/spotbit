@@ -30,6 +30,7 @@ exchange_limit = 200 #when there are more exchanges than this multithreading is 
 performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
 historyEnd = 0
+on_demand = False # whether or not we are caching data
 score = 0 #the current percent of empty tables
 #the information regarding the current thread
 threadResults = None
@@ -119,6 +120,7 @@ def configure():
     global currencies
     global exchanges
     global interval
+    global on_demand
     if flaskRequest.method == 'POST':
         #return the config settings TODO: error check so that the user doesn't have to submit everything at once. Also implement a form here.
         keepWeeks = flaskRequest.json("keepWeeks")
@@ -127,6 +129,8 @@ def configure():
         interval = flaskRequest.json("interval")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
+        if on_demand:
+            return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':list(ex_objs.keys()), 'interval':interval}
         return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
         
 
@@ -490,6 +494,7 @@ def read_config():
     global historicalExchanges
     global historyEnd
     global keepWeeks
+    global on_demand
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
@@ -514,6 +519,7 @@ def read_config():
                     e = e.replace("\n", "")
                     if e == "all":
                         exchanges = list(ex_objs.keys())
+                        on_demand = True
                         break
                     if e not in exchanges and is_supported(e) == True:
                         exchanges.append(e)
