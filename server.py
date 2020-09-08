@@ -129,9 +129,7 @@ def configure():
         interval = flaskRequest.json("interval")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
-        if on_demand:
-            return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':list(ex_objs.keys()), 'interval':interval}
-        return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
+        return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'on demand exchanges':list(ex_objs.keys()), 'cached exchanges': exchanges, 'interval':interval}
         
 
 # Get the latest price entry in the database.
