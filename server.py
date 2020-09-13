@@ -176,7 +176,13 @@ def now_noex(currency):
             if res != None:
                 components_list.append(res)
             else:
-                failed_exchanges.append(exchange)
+                # if there is no data in the table yet, then try a direct request.
+                res = fallback_to_direct(exchange, currency, db_n)
+                if res['id'] == None:
+                    log.error(f"could not get data from {exchange}")
+                    failed_exchanges.append(exchange)
+                else:
+                    components_list.append(res)
         result = average_price_value(components_list, 9, ticker)
         result['exchanges'] = components
         result['failed_exchanges'] = failed_exchanges
@@ -233,7 +239,7 @@ def fallback_to_direct(exchange, currency, db_n):
     #make a direct request
     ticker = "BTC-{}".format(currency.upper())
     res = request_single(exchange, currency)
-    db_n.close()
+    #db_n.close()
     if res != None:
         return res
     else:
