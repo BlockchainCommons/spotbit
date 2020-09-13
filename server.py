@@ -35,8 +35,8 @@ score = 0 #the current percent of empty tables
 #the information regarding the current thread
 threadResults = None
 # curated exchange lists for creating averages
-curated_exchanges = {'USD': ['gemini', 'bitstamp', 'okcoin', 'btse', 'coinsbit'], 'GBP': ['coinbasepro', 'coinsbank', 'bitstamp', 'kraken', 'cexio'], 'EUR': ['coinbasepro', 'bitstamp', 'bitfinex', 'coinsbit', 'indoex'], 'JPY': ['bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif']}
-curated_exchanges_list = ['gemini', 'bitstamp', 'okcoin', 'btse', 'coinsbit', 'coinbasepro', 'coinsbank', 'kraken', 'cexio', 'bitfinex', 'coinsbit', 'indoex', 'bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif']
+curated_exchanges = {'USD': ['gemini', 'bitstamp', 'okcoin'], 'GBP': ['coinbasepro', 'coinsbank', 'bitstamp', 'kraken', 'cexio'], 'EUR': ['coinbasepro', 'bitstamp', 'bitfinex', 'indoex'], 'JPY': ['bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif']}
+curated_exchanges_list = ['gemini', 'bitstamp', 'okcoin', 'coinsbit', 'coinbasepro', 'coinsbank', 'kraken', 'cexio', 'bitfinex', 'indoex', 'bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif']
 curated_currencies = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'USDT']
 
 
@@ -137,13 +137,50 @@ def configure():
         return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'on demand exchanges':list(ex_objs.keys()), 'cached exchanges': exchanges, 'interval':interval}
 
 # return averages in a list of tuples
+# find the oldest timestamp in the list of tuples
 def average_price_value(tuple_list, tuple_length):
     running_sums = [0] * tuple_length
+    oldest_timestamp = 1e12
     for tup in tuple_list:
         for i in range(0,tuple_length):
-            running_sums[i] += tup[i]
+            if i == 2 and tup[i] < oldest_timestamp:
+                oldest_timestamp = tup[i]
+            if i > 3:
+                running_sums[i] += tup[i]
     list_len = len(tuple_list)
-    return {'id': 'average_value', 'timestamp': (datetime.now()).timestamp()*1e3, 'datetime': datetime.now(), 'currency_pair': ticker, 'open': running_sums[4]/list_len, 'high': running_sums[5]/list_len, 'low': running_sums[6]/list_len, 'close': running_sums[7]/list_len 'volume': running_sums[8]/list_len}
+    return {'id': 'average_value', 'timestamp': (datetime.now()).timestamp()*1e3, 'datetime': datetime.now(), 'oldest_timestamp': oldest_timestamp, 'currency_pair': ticker, 'open': running_sums[4]/list_len, 'high': running_sums[5]/list_len, 'low': running_sums[6]/list_len, 'close': running_sums[7]/list_len 'volume': running_sums[8]/list_len}
+
+# route for when a call is made without specifying an exchange.
+# return an average of the 5 curated exchanges for that currency
+@app.route('/now/<currency>')
+def now_noex(currency):
+    db_n = sqlite3.connect(p, timeout=30)
+    currency = currency.upper()
+    ticker = f"BTC-{currency}"
+    # only calculate averages if a list has been curated already
+    if currency in curated_currencies:
+        components = curated_exchanges[currency]
+        failed_exchanges = []
+        components_list = []
+        for exchange in components:
+            ms_check = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+            cursor = db_n.execute(ms_check)
+            res = cursor.fetchone()
+            # only take values from within 15 min of present
+            ts_delta = (datetime.now() - timedelta(minutes=15)).timestamp()
+            if res!= None and is_ms(int(res[0])):
+                ts_delta *= 1e3
+            statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {ts_delta} ORDER BY timestamp DESC LIMIT 1;'"
+            cursor = db_n.execute(statement)
+            res = cursor.fetchone()
+            if res not None:
+                components_list.append(res)
+            else:
+                failed_exchanges.append(exchange)
+        result = average_price_value(components_list, 9, ticker)
+        result['exchanges'] = components
+        result['failed_exchanges'] = failed_exchanges
+        return result
 
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
@@ -152,25 +189,7 @@ def average_price_value(tuple_list, tuple_length):
 def now(currency, exchange):
     db_n = sqlite3.connect(p, timeout=30)
     ticker = "BTC-{}".format(currency.upper())
-    if exchange is None:
-        # give back the average value when the user does not specify an exchange. curated averaging lists are specified above.
-        if currency.upper() in curated_currencies:
-            components = curated_exchanges[currency.upper()] 
-            components_list = []
-            for exchange in components:
-                ms_check = f"SELECT timestamp FROM {exchange} LIMIT 1;"
-                cursor = db_n.execute(ms_check)
-                res = cursor.fetchone()
-                ts_delta = (datetime.now() - timedelta(minutes=15)).timestamp()
-                if res != None and is_ms(int(res[0])):
-                    ts_delta *= 1e3
-                statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {ts_delta} ORDER BY timestamp DESC LIMIT 1;"
-                cursor = db_n.execute(statement)
-                res = cursor.fetchone()
-                components_list.append(res)
-            result = average_price_value(components_list, len(components_list[0]))
-            return result
-    elif exchange in exchanges:
+    if exchange in exchanges:
         #if the exchange is already in the config file
         #statement = "SELECT * FROM {} WHERE pair = '{}' AND timestamp = (SELECT MAX(timestamp) FROM {});".format(exchange, ticker, exchange)
         statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' ORDER BY timestamp DESC LIMIT 1;"
