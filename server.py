@@ -35,7 +35,7 @@ score = 0 #the current percent of empty tables
 #the information regarding the current thread
 threadResults = None
 # curated exchange lists for creating averages
-curated_exchanges = {'USD': ['coinbasepro', 'hitbtc', 'bitfinex', 'kraken', 'bitstamp'], 'GBP': ['coinbasepro', 'coinsbank', 'bitstamp', 'kraken', 'cexio'], 'EUR': ['kraken', 'coinbasepro', 'bitstamp', 'bitfinex', 'indoex'], 'JPY': ['bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif'], 'USDT': ['binance', 'okex', 'huobipro', 'bitmax', 'gateio']}
+curated_exchanges = {'USD': ['coinbasepro', 'okcoin', 'bitfinex', 'kraken', 'bitstamp'], 'GBP': ['coinbasepro', 'coinsbank', 'bitstamp', 'kraken', 'cexio'], 'EUR': ['kraken', 'coinbasepro', 'bitstamp', 'bitfinex', 'indoex'], 'JPY': ['bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif'], 'USDT': ['binance', 'okex', 'huobipro', 'bitmax', 'gateio']}
 curated_exchanges_list = ['gemini', 'bitstamp', 'okcoin', 'coinsbit', 'coinbasepro', 'coinsbank', 'kraken', 'cexio', 'bitfinex', 'indoex', 'bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif', 'hitbtc', 'binance', 'okex', 'gateio', 'bitmax']
 curated_currencies = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'USDT']
 
@@ -178,7 +178,7 @@ def now_noex(currency):
             else:
                 # if there is no data in the table yet, then try a direct request.
                 res = fallback_to_direct(exchange, currency, db_n)
-                if res['id'] == None:
+                if len(res) < 2:
                     log.error(f"could not get data from {exchange}")
                     failed_exchanges.append(exchange)
                 else:
@@ -289,7 +289,33 @@ def hist(currency, exchange, date_start, date_end):
     db_n.close()
     return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'vol'], 'data':res}
 
-
+# Return all database rows within `tolerance` for each of the supplied dates
+# Dates should be provided as millisecond timestamps separated by hyphens
+@app.route('/hist/<currency>/<exchange>/<dates>')
+def hist_single_dates(currency, exchange, dates):
+    db_n = sqlite3.connect(p, timeout=10)
+    ticker = "BTC-{}".format(currency.upper())
+    dates_list = dates.split("-")
+    # the number of minutes away from a given date that is considered acceptable
+    tolerance = 60
+    results = {}
+    for d in dates_list:
+        try:
+            ts = int(d)*1e3
+        except Exception:
+            return f"malformed date {d}"
+        dt = datetime.fromtimestamp(ts/1e3)
+        lower_bound = (dt - timedelta(minutes=tolerance)).timestamp()*1e3
+        upper_bound = (dt + timedelta(minutes=tolerance)).timestamp()*1e3
+        statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp DESC;"
+        # right now we return everything
+        cursor = db_n.execute(statement)
+        res = cursor.fetchall()
+        if res != None:
+            results[f"{d}"] = res
+        else:
+            results[f"{d}"] = None
+    return results
 # Make a single request, without having to loop through all exchanges and currency pairs.
 # This is intended for when the user requests an exchange in /now that is not present in the database.
 # It will probably not be used for /hist because of the length of time getting arbitrary amounts of historical data can be
