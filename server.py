@@ -315,7 +315,7 @@ def hist_single_dates(currency, exchange, dates):
         upper_bound = (dt + timedelta(minutes=tolerance)).timestamp()*1e3
         if ms_precision == False:
             ts /= 1e3
-        statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp DESC;"
+        statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp ASC;"
         # right now we return everything
         cursor = db_n.execute(statement)
         res = cursor.fetchall()[0]
