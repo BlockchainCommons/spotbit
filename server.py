@@ -297,22 +297,30 @@ def hist_single_dates(currency, exchange, dates):
     ticker = "BTC-{}".format(currency.upper())
     dates_list = dates.split("-")
     # the number of minutes away from a given date that is considered acceptable
-    tolerance = 60
+    tolerance = 30
     results = {}
+    check_ms = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+    cursor = db_n.execute(check_ms)
+    ts = cursor.fetchone()
+    ms_precision = True
+    if ts != None and is_ms(int(ts[0])) != True:
+        ms_precision = False
     for d in dates_list:
         try:
-            ts = int(d)*1e3
+            ts = int(d)
         except Exception:
             return f"malformed date {d}"
         dt = datetime.fromtimestamp(ts/1e3)
         lower_bound = (dt - timedelta(minutes=tolerance)).timestamp()*1e3
         upper_bound = (dt + timedelta(minutes=tolerance)).timestamp()*1e3
+        if ms_precision == False:
+            ts /= 1e3
         statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp DESC;"
         # right now we return everything
         cursor = db_n.execute(statement)
-        res = cursor.fetchall()
+        res = cursor.fetchall()[0]
         if res != None:
-            results[f"{d}"] = res
+            results[f"{d}"] = {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]}
         else:
             results[f"{d}"] = None
     return results
@@ -748,7 +756,14 @@ def prune(keepWeeks):
                         else:
                             cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
                             statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-                        db_n.execute(statement)
+                        while True:
+                            try:
+                                db_n.execute(statement)
+                                break
+                            except sqlite3.OperationalError as op:
+                                log.error(f"{op}. Trying again in one hour...")
+                                print(f"{op}. Trying again in one hour...")
+                                time.sleep(3600)
                         db_n.commit()
                     except TypeError as te:
                         log.error(f"too early to prune {te}")
