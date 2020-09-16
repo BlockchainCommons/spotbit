@@ -41,6 +41,7 @@ then
   # set python3.8 to the default python3 and move the old python3 to a different location
   cp /usr/bin/python3 /usr/bin/python$PYTHON_VERSION
   cp /usr/bin/python3.8 /usr/bin/python3
+  cd ..
   echo "done"
 fi
 ################################################################################################################################
