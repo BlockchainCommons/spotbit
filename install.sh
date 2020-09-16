@@ -1,6 +1,8 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 pwd
+ls
+ls .
 # Install script for Spotbit
 # By Christian Murray
 # Blockchain Commons
@@ -35,10 +37,10 @@ then
   cd Python-3.8.0
   ./configure
   make
-  sudo make install 
+  make install 
   # set python3.8 to the default python3 and move the old python3 to a different location
-  sudo cp /usr/bin/python3 /usr/bin/python$PYTHON_VERSION
-  sudo cp /usr/bin/python3.8 /usr/bin/python3
+  cp /usr/bin/python3 /usr/bin/python$PYTHON_VERSION
+  cp /usr/bin/python3.8 /usr/bin/python3
   echo "done"
 fi
 ################################################################################################################################
@@ -47,7 +49,7 @@ fi
 # need to force python3.8 as well
 # TODO: compile and install python3.8
 echo "installing python dependencies..."
-pip3 install -r ./requirements.txt
+pip3 install -r requirements.txt
 echo "done"
 
 ################################################################################################################################
@@ -91,7 +93,7 @@ echo "done"
 
 # add a systemd service for spotbit (created by @fonta1n3)
 echo "creating systemd service..."
-cp ./spotbit.service /etc/systemd/system/
+cp spotbit.service /etc/systemd/system/
 echo "done"
 
 # start the tor service after we're done
@@ -111,15 +113,15 @@ cp spotbit_example.config /home/spotbit/.spotbit/spotbit.config
 
 # move source code to the spotbit user dir
 echo "copying source to /home/spotbit/source..."
-sudo mkdir /home/spotbit/source
+mkdir /home/spotbit/source
 cp -r ./* /home/spotbit/source/
 systemctl daemon-reload
 echo "done"
 
 python3 ./configure.py
 # add spotbit to the root group and make its source dir owned by this group
-sudo gpasswd -a spotbit root
-sudo chown -R spotbit:root /home/spotbit/source
+gpasswd -a spotbit root
+chown -R spotbit:root /home/spotbit/source
 # show the URL of the hidden service
 echo "waiting 2 minutes for tor to finish bootstrapping."
 sleep 2m
