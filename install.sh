@@ -102,14 +102,12 @@ service tor start
 
 ################################################################################################################################
 # Copy the default config to file
+mkdir /home/spotbit/.spotbit
 if test -f "/home/spotbit/.spotbit/spotbit.config"; then
-  echo "configs already configured"
-else
-  mkdir /home/spotbit/.spotbit
-  touch /home/spotbit/.spotbit/spotbit.config
-  cat spotbit_example.config >> /home/spotbit/.spotbit/spotbit.config
-  echo "You are currently using the default config. To change this, edit /home/spotbit/.spotbit/spotbit.config"
+  echo "configuration found. saving to spotbit_old.config"
+  cp /home/spotbit/.spotbit/spotbit.config /home/spotbit/.spotbit/spotbit_old.config
 fi
+cp spotbit_example.config /home/spotbit/.spotbit/spotbit.config
 
 # move source code to the spotbit user dir
 echo "copying source to /home/spotbit/source..."
