@@ -14,6 +14,22 @@
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
+### Roadmap
+June 2020
+* Completion of research and planning.
+
+August 2020
+* Completed first working setup, began alpha testing.
+
+September 2020
+* Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
+
+Late 2020
+* Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
+
+Late 2020/ Early 2021
+* Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
+
 ### Installation and Usage
 
 #### Script Install
