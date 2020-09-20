@@ -2,6 +2,10 @@
 
 **Spotbit** is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service. Spotbit can be easily used with Tor and served as a hidden service.
 
+**Spotbit** allows a wallet or remote client to reuqest price data from a server of their choice, or host their own server. Each server automatically supports dozens of exchanges and can provide data more quickly and at higher rates than directly polling an exchange API due to Spotbit's use of a local database. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with spotbit far more secure than other price data services. 
+
+**Spotbit** is extremely flexible software. The user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep. Spotbit can be used as a repository of historical data that allows for more frequent API requests than exchanges, or as a simple wrapper around exchange APIs that allows the user to collect information over tor.
+
 ## Additional Information
 
 * At this stage, Spotbit relies on the CCXT library for API calls. In the future, some exchanges will have websocket support as well to increase the amount and accuracy of the data recieved.
@@ -24,7 +28,7 @@ After that, the installer will install and setup tor on your system, then create
 The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
 
 #### Running Spotbit
-To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. There are currently three API routes you can use:
+To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. These are the API routes you can use:
 
 * `/status`
     - Returns a string message if the server is running
