@@ -1,0 +1,14 @@
+[Unit]
+Description=spotbit
+Requires=tor.service
+After=tor.service
+
+[Service]
+WorkingDirectory=/home/spotbit/source
+ExecStart=/usr/local/bin/python3 /home/spotbit/source/server.py
+User=spotbit
+Group=root
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

@@ -19,24 +19,39 @@ logFileHandler.setLevel(logging.DEBUG)
 log.addHandler(logFileHandler)
 #Config Settings
 allowedFields = ["keepWeeks", "exchanges", "currencies", "interval", "exchange_limit", "averaging_time", "historicalExchanges", "historyEnd"]
-configPath = Path("/home/spotbit/.spotbit/spotbit.config").expanduser()
+configPath = Path("/home/spotbit/.spotbit/spotbit.config")
 #Default values; these will be overwritten when the config file is read
 exchanges = []
 historicalExchanges = [] # exchanges that we want the history of
 currencies = []
 interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
-exchange_limit = 2 #when there are more exchanges than this multithreading is ideal
+exchange_limit = 200 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
 averaging_time = 4 # the number of hours that we should average information over
 historyEnd = 0
+on_demand = False # whether or not we are caching data
 score = 0 #the current percent of empty tables
+#the information regarding the current thread
+threadResults = None
+# curated exchange lists for creating averages
+curated_exchanges = {'USD': ['coinbasepro', 'okcoin', 'bitfinex', 'kraken', 'bitstamp'], 'GBP': ['coinbasepro', 'coinsbank', 'bitstamp', 'kraken', 'cexio'], 'EUR': ['kraken', 'coinbasepro', 'bitstamp', 'bitfinex', 'indoex'], 'JPY': ['bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif'], 'USDT': ['binance', 'okex', 'huobipro', 'bitmax', 'gateio']}
+curated_exchanges_list = ['gemini', 'bitstamp', 'okcoin', 'coinsbit', 'coinbasepro', 'coinsbank', 'kraken', 'cexio', 'bitfinex', 'indoex', 'bitflyer', 'liquid', 'coincheck', 'bitbank', 'zaif', 'hitbtc', 'binance', 'okex', 'gateio', 'bitmax']
+curated_currencies = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'USDT']
 
-#Database
+
 p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
+
+# Database configuration
+# We need to have the database opened manually once so that systemd can access it
+def configure_db():
+    p = Path("/home/spotbit/.spotbit/sb.db")
+    db = sqlite3.connect(p)
+    print(f"db opened in {p}")
+    log.debug(f"db opened in {p}")
 app = Flask(__name__)
 
 # split up the number of exchanges per chunk based on how many cpu cores are available
@@ -52,7 +67,7 @@ def optimize_chunks(cpuOffset):
 # Need to find a way to automatically create a list of exchange objects. 
 # btctradeim doesn't want to work on raspberry pi
 def init_supported_exchanges():
-    objects = {"acx":ccxt.acx(), "aofex":ccxt.aofex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeua":ccxt.btctradeua(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
+    objects = {"acx":ccxt.acx(), "aofex":ccxt.aofex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeua":ccxt.btctradeua(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coinbasepro":ccxt.coinbasepro(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
     return objects
 
 # Check if a given exchange is in the list of supported exchanges.
@@ -69,17 +84,35 @@ def is_supported(exchange):
         log.error(f"caught an error {e}")
         return False
 
+# Check if a timestamp has ms precision by modding by 1000
+def is_ms(timestamp):
+    if timestamp % 1000 == 0:
+        return True
+    return False
+
 # We create a list of all exchanges to do error checking on user input
 ex_objs = init_supported_exchanges()
 num_exchanges = len(ex_objs)
 print(f"created list of {num_exchanges}")
 log.info(f"created list of {num_exchanges}")
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # TODO: create an html page to render here
 @app.route('/status')
 def status():
     global score
-    return f"{score}% of tables are empty. Server is running"
+    global threadResults
+    if performance_mode:
+        l = len(threadResults)
+        content = f"Threads: {l}"
+        for chunk, thread in threadResults:
+            html += f"{chunk} at memory address: {thread}"
+        return f"<html><p>{content}</p></html>"
+    else:
+        return "server is running"
 
 # configure the settings of Spotbit while the server is still running
 # send a GET request to this route to view current settings
@@ -92,6 +125,7 @@ def configure():
     global currencies
     global exchanges
     global interval
+    global on_demand
     if flaskRequest.method == 'POST':
         #return the config settings TODO: error check so that the user doesn't have to submit everything at once. Also implement a form here.
         keepWeeks = flaskRequest.json("keepWeeks")
@@ -100,8 +134,59 @@ def configure():
         interval = flaskRequest.json("interval")
         return {'updated settings?':'yes', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
     else:
-        return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'exchanges':exchanges, 'interval':interval}
-        
+        return {'updated settings?':'no', 'keepWeeks':keepWeeks, 'currencies':currencies, 'on demand exchanges':list(ex_objs.keys()), 'cached exchanges': exchanges, 'interval':interval}
+
+# return averages in a list of tuples
+# find the oldest timestamp in the list of tuples
+def average_price_value(tuple_list, tuple_length, ticker):
+    running_sums = [0] * tuple_length
+    oldest_timestamp = 1e13
+    for tup in tuple_list:
+        if tup[1] < oldest_timestamp:
+            oldest_timestamp = tup[1]
+        for i in range(0,tuple_length):
+            if i > 3:
+                running_sums[i] += tup[i]
+    list_len = len(tuple_list)
+    return {'id': 'average_value', 'timestamp': (datetime.now()).timestamp()*1e3, 'datetime': datetime.now(), 'oldest_timestamp': oldest_timestamp, 'currency_pair': ticker, 'open': running_sums[4]/list_len, 'high': running_sums[5]/list_len, 'low': running_sums[6]/list_len, 'close': running_sums[7]/list_len, 'volume': running_sums[8]/list_len}
+
+# route for when a call is made without specifying an exchange.
+# return an average of the 5 curated exchanges for that currency
+@app.route('/now/<currency>')
+def now_noex(currency):
+    db_n = sqlite3.connect(p, timeout=30)
+    currency = currency.upper()
+    ticker = f"BTC-{currency}"
+    # only calculate averages if a list has been curated already
+    if currency in curated_currencies:
+        components = curated_exchanges[currency]
+        failed_exchanges = []
+        components_list = []
+        for exchange in components:
+            ms_check = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+            cursor = db_n.execute(ms_check)
+            res = cursor.fetchone()
+            # only take values from within 15 min of present
+            ts_delta = (datetime.now() - timedelta(minutes=15)).timestamp()
+            if res!= None and is_ms(int(res[0])):
+                ts_delta *= 1e3
+            statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {ts_delta} ORDER BY timestamp DESC LIMIT 1;"
+            cursor = db_n.execute(statement)
+            res = cursor.fetchone()
+            if res != None:
+                components_list.append(res)
+            else:
+                # if there is no data in the table yet, then try a direct request.
+                res = fallback_to_direct(exchange, currency, db_n)
+                if len(res) < 2:
+                    log.error(f"could not get data from {exchange}")
+                    failed_exchanges.append(exchange)
+                else:
+                    components_list.append(res)
+        result = average_price_value(components_list, 9, ticker)
+        result['exchanges'] = components
+        result['failed_exchanges'] = failed_exchanges
+        return result
 
 # Get the latest price entry in the database.
 # Currency: the three letter base currency desired. Must be a currency you are already collecting data for
@@ -126,7 +211,7 @@ def now(currency, exchange):
             return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
         else:
             db_n.close()
-            return {'id': res}
+            return fallback_to_direct(exchange, currency, db_n)
     elif exchange == "all": #if all is selected then we select from all exchanges and average the latest close
         result_set = []
         for e in exchanges:
@@ -134,34 +219,37 @@ def now(currency, exchange):
             check_ms = f"SELECT timestamp FROM {e} LIMIT 1;"
             cursor = db_n.execute(check_ms)
             db_n.commit()
-            if int(cursor.fetchone()[0]) % 1000 == 0:
+            ts = cursor.fetchone()
+            if ts != None and is_ms(int(ts[0])):
                 print(f"using ms precision for {e}")
                 logging.info(f"using ms precision for {e}")
                 ts_cutoff *= 1e3 
-            statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} ORDER BY timestamp LIMIT 1;"
+            statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} AND pair = '{ticker}' ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
             db_n.commit()
-            result_set.append(cursor.fetchone())
-        return {ticker: list_mean(result_set)}
+            result = cursor.fetchone()
+            if result != None:
+                result_set.append(result[1])
+        return {'ticker': list_mean(result_set)}
     else:
-        #make a direct request
-        res = request_single(exchange, currency)
-        db_n.close()
-        if res != None:
-            dt = None
-            if res[0] % 1000 == 0:
-                dt = datetime.fromtimestamp(res[0]/1e3)
-            else:
-                dt = datetime.fromtimestamp(res[0])
-            return {'id':'on_demand', 'timestamp':res[0], 'datetime':dt, 'currency_pair':ticker, 'open':res[1], 'high':res[2], 'low':res[3], 'close':res[4], 'vol':res[5]} 
-        else:
-            return {'id': res}
+        return fallback_to_direct(exchange, currency, db_n)
+
+# This method will directly request an exchange that is supported but who's table is also empty
+def fallback_to_direct(exchange, currency, db_n):
+    #make a direct request
+    ticker = "BTC-{}".format(currency.upper())
+    res = request_single(exchange, currency)
+    #db_n.close()
+    if res != None:
+        return res
+    else:
+        return {'id': res}
 
 # Find the mean of a list of two-value tuples
 def list_mean(input_list):
-    avg = 0
+    avg = 0.0
     for l in input_list:
-        avg += l[1]
+        avg += l
     return avg/len(input_list)
 
 # Get data from local storage inside of a certain range.
@@ -172,6 +260,7 @@ def list_mean(input_list):
 @app.route('/hist/<currency>/<exchange>/<date_start>/<date_end>', methods=['GET'])
 def hist(currency, exchange, date_start, date_end):
     db_n = sqlite3.connect(p, timeout=10)
+    ticker = "BTC-{}".format(currency.upper())
     #check what format of dates we have
     if (str(date_start)).isdigit():
         date_s = int(date_start)         
@@ -183,43 +272,121 @@ def hist(currency, exchange, date_start, date_end):
             date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
         except Exception:
             return "malformed dates. Use YYYY-MM-DDTHH:mm:SS or millisecond timestamps. Provide both dates in the same format"
-    statement = "SELECT * FROM {} WHERE timestamp > {} AND timestamp < {};".format(exchange, date_s, date_e)
+    # check the table we want to select from to see the precision of it
+    check = f"SELECT timestamp FROM {exchange} ORDER BY timestamp DESC LIMIT 1;"
+    cursor = db_n.execute(check)
+    statement = ""
+    ts = cursor.fetchone()
+    if ts != None and is_ms(int(ts[0])):
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';"
+    else:
+        # for some exchanges we cannot use ms precision timestamps (such as coinbase)
+        date_s /= 1e3
+        date_e /= 1e3
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';" 
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
-    return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'close', 'vol'], 'data':res}
+    return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'vol'], 'data':res}
 
-
+# Return all database rows within `tolerance` for each of the supplied dates
+# Dates should be provided as millisecond timestamps separated by hyphens
+@app.route('/hist/<currency>/<exchange>/<dates>')
+def hist_single_dates(currency, exchange, dates):
+    db_n = sqlite3.connect(p, timeout=10)
+    ticker = "BTC-{}".format(currency.upper())
+    dates_list = dates.split("-")
+    # the number of minutes away from a given date that is considered acceptable
+    tolerance = 30
+    results = {}
+    check_ms = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+    cursor = db_n.execute(check_ms)
+    ts = cursor.fetchone()
+    ms_precision = True
+    if ts != None and is_ms(int(ts[0])) != True:
+        ms_precision = False
+    for d in dates_list:
+        try:
+            ts = int(d)
+        except Exception:
+            return f"malformed date {d}"
+        dt = datetime.fromtimestamp(ts/1e3)
+        lower_bound = (dt - timedelta(minutes=tolerance)).timestamp()*1e3
+        upper_bound = (dt + timedelta(minutes=tolerance)).timestamp()*1e3
+        if ms_precision == False:
+            ts /= 1e3
+        statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp ASC;"
+        # right now we return everything
+        cursor = db_n.execute(statement)
+        res = cursor.fetchall()[0]
+        if res != None:
+            results[f"{d}"] = {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]}
+        else:
+            results[f"{d}"] = None
+    return results
 # Make a single request, without having to loop through all exchanges and currency pairs.
 # This is intended for when the user requests an exchange in /now that is not present in the database.
 # It will probably not be used for /hist because of the length of time getting arbitrary amounts of historical data can be
 def request_single(exchange, currency):
     if not is_supported(exchange):
-        return "{} is not supported by CCXT".format(exchange)
+        return f"{exchange} is not supported by CCXT"
     obj = ex_objs[exchange]
     ticker = "BTC/{}".format(currency.upper())
+    dt = None
     if obj.has['fetchOHLCV']:
+        tframe = '1m'
+        # drop all this in a separate method
+        lim = 1000
+        if exchange == "bleutrade" or exchange == "btcalpha" or exchange == "rightbtc" or exchange == "hollaex":
+            tframe = '1h'
+        if exchange == "poloniex":
+            tframe = '5m'
+        # some exchanges have explicit limits on how many candles you can get at once
+        if exchange == "bitstamp":
+            lim = 1000
+        if exchange == "bybit":
+            lim = 200
+        if exchange == "eterbase":
+            lim = 1000000
+        if exchange == "exmo":
+            lim = 3000
+        if exchange == "btcalpha":
+            lim = 720
         result = None
         if exchange == "bitfinex": #other exchanges requiring special conditions: bitstamp, bitmart
             params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
             try:
-                result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe='1m', since=None, params=params)
+                result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, params=params)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
                 logging.error(f"got an error requesting to {exchange}: {e}")
         else:
             try:
-                result = obj.fetch_ohlcv(ticker, timeframe='1m')
+                result = obj.fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim)
             except Exception as e:
                 print(f"got an error requesting to {exchange}: {e}")
                 logging.error(f"got an error requesting to {exchange}: {e}")
     else:
         try:
             result = obj.fetch_ticker(ticker)
+            if result != None and is_ms(result['timestamp']) == False:
+                dt = datetime.fromtimestamp(result['timestamp'])
+            else:
+                dt = datetime.fromtimestamp(result['timestamp'] / 1e3)
+            if result != None:
+                return {'close': result['close'], 'symbol': ticker, 'timestamp': result['timestamp'], 'datetime': dt, 'volume': result['bidVolume'], 'id': 'on_demand'}
         except Exception as e:
             print(f"got ratelimited on {e}")
             logging.error(f"got ratelimited on {e}")
-    return result[-1]
+    if result != None:
+        res = result[-1]
+        if is_ms(res[0]):
+            dt = datetime.fromtimestamp(res[0]/1e3)
+        else:
+            dt = datetime.fromtimestamp(res[0])
+        return {'id': 'on_demand', 'timestamp': res[0], 'datetime': dt, 'currency_pair': ticker, 'open': res[1], 'high': res[2], 'low': res[3], 'close': res[4], 'vol': res[5]}
+    else:
+        return "no data"
 
 
 # Make an HTTP GET request to exchanges via the ccxt API
@@ -235,10 +402,22 @@ def request(exchanges,interval,db_n):
                 if ex_objs[e].has['fetchOHLCV']:
                     candle = None
                     tframe = '1m'
-                    if e == "bleutrade" or e == "btcalpha" or e == "rightbtc":
+                    lim = 1000
+                    if e == "bleutrade" or e == "btcalpha" or e == "rightbtc" or e == "hollaex":
                         tframe = '1h'
                     if e == "poloniex":
                         tframe = '5m'
+                    # some exchanges have explicit limits on how many candles you can get at once
+                    if e == "bitstamp":
+                        lim = 1000
+                    if e == "bybit":
+                        lim = 200
+                    if e == "eterbase":
+                        lim = 1000000
+                    if e == "exmo":
+                        lim = 3000
+                    if e == "btcalpha":
+                        lim = 720
                     if e == "bitfinex":
                         params = {'limit':100, 'start':(round((datetime.now()-timedelta(hours=1)).timestamp()*1000)), 'end':round(datetime.now().timestamp()*1000)}
                         try:
@@ -253,7 +432,7 @@ def request(exchanges,interval,db_n):
                             success = False
                     else:
                         try:
-                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
                             if candle == None:
                                 raise Exception(f"candle from {e} is nulll")
                         except Exception as err:
@@ -296,11 +475,14 @@ def request(exchanges,interval,db_n):
                         success = False
                     if success:
                         ts = None
-                        if price['timestamp'] % 1000 == 0:
-                            ts = datetime.fromtimestamp(price['timestamp']/1e3)
-                        else:
-                            ts = datetime.fromtimestamp(price['timestamp'])
-                            ticker = ticker.replace("/", "-")
+                        try:
+                            if is_ms(int(price['timestamp'])):
+                                ts = datetime.fromtimestamp(int(price['timestamp'])/1e3)
+                            else:
+                                ts = datetime.fromtimestamp(int(price['timestamp']))
+                        except OverflowError as oe:
+                            print(f"{oe} caused by {ts}")
+                        ticker = ticker.replace("/", "-")
                         statement = f"INSERT INTO {e} (timestamp, datetime, pair, open, high, low, close, volume) VALUES ({price['timestamp']}, '{ts}', '{ticker}', 0.0, 0.0, 0.0, {price['last']}, 0.0);"
                         db_n.execute(statement)
                         db_n.commit()
@@ -357,7 +539,7 @@ def request_history(exchange, currency, start_date, end_date):
             dt = None
             symbol = ticker.replace("/", "-")
             try:
-                if line['timestamp'] % 1000 == 0:
+                if is_ms(int(line['timestamp'])):
                     dt = datetime.fromtimestamp(line['timestamp'] / 1e3)
                 else:
                     dt = datetime.fromtimestamp(line['timestamp'])
@@ -374,6 +556,7 @@ def request_history(exchange, currency, start_date, end_date):
         print(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         log.info(f"table: {exchange} period: {start_date} to {end_date} rows inserted: {l}")
         start_date += 1e4 #leaving this hardcoded for now
+        start_date = int(start_date)
         time.sleep(interval)
     
 # Create a thread for each exchange that needs history.
@@ -398,6 +581,8 @@ def read_config():
     global exchange_limit
     global historicalExchanges
     global historyEnd
+    global keepWeeks
+    global on_demand
     with open(configPath, "r") as f:
         lines = f.readlines()
         #read each line in the file
@@ -422,6 +607,7 @@ def read_config():
                     e = e.replace("\n", "")
                     if e == "all":
                         exchanges = list(ex_objs.keys())
+                        on_demand = True
                         break
                     if e not in exchanges and is_supported(e) == True:
                         exchanges.append(e)
@@ -494,6 +680,44 @@ def poke_db(exchanges):
     print(f"{score}% of tables are empty")
     return score
 
+# Find gaps in an exchanges database back to historyEnd and create a list of those gaps as tuples
+def find_gaps(exchange, currency):
+    global historyEnd
+    db_n = sqlite3.connect(p)
+    currency = currency.upper()
+    ticker = f"BTC-{currency}"
+    statement = f"SELECT timestamp FROM {exchange} LIMIT 1;"
+    c = db_n.execute(statement)
+    res = c.fetchone()
+    if res != None and is_ms(int(res[0])):
+        statement = f"SELECT timestamp,datetime FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {historyEnd} ORDER BY timestamp;"
+    else:
+        statement = f"SELECT timestamp, datetime FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {historyEnd / 1e3} ORDER BY timestamp;"
+    c = db_n.execute(statement)
+    res = c.fetchall()
+    report = {}
+    # later in time is higer ids
+    i = 0
+    key = 0
+    stop = len(res)
+    #make the time gap a configurable param
+    while i < stop-1:
+        if res[i+1][0] > res[i][0]+1000000:
+            #report.append((res[i], res[i+1]))
+            report[key] = f"{res[i][0]}-{res[i+1][0]}"
+            key +=1
+        i += 1
+    return report
+
+# Fill gaps in a table via request_history
+def backfill(report, exchange, currency):
+    for key in report:
+        print(f"filling gap {key}")
+        rang = report[key].split("-")
+        start = int(rang[0])
+        end = int(rang[1])
+        request_history(exchange, currency, start, end)
+
 # This method is called at the first run.
 # It sets up the required tables inside of a local sqlite3 database. There is one table for each exchange.
 # Tables are only created if they do not already exist. Install will attempt to create tables for every listed exchange at once when called.
@@ -524,14 +748,25 @@ def prune(keepWeeks):
                 cursor = db_n.execute(check)
                 check_ts = cursor.fetchone()
                 statement = ""
-                if int(check_ts) % 1000 == 0:
-                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
-                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-                else:
-                    cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
-                    statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
-                db_n.execute(statement)
-                db_n.commit()
+                if check_ts[0] is not None:
+                    try:
+                        if is_ms(int(check_ts[0])):
+                            cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()*1000
+                            statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                        else:
+                            cutoff = (datetime.now()-timedelta(weeks=keepWeeks)).timestamp()
+                            statement = f"DELETE FROM {exchange} WHERE timestamp < {cutoff};"
+                        while True:
+                            try:
+                                db_n.execute(statement)
+                                break
+                            except sqlite3.OperationalError as op:
+                                log.error(f"{op}. Trying again in one hour...")
+                                print(f"{op}. Trying again in one hour...")
+                                time.sleep(3600)
+                        db_n.commit()
+                    except TypeError as te:
+                        log.error(f"too early to prune {te}")
         time.sleep(60000)
     
 
@@ -539,7 +774,6 @@ if __name__ == "__main__":
     install() #install will call read_config
     chunk_size = optimize_chunks(cpuOffset=0)
     threadResults = None
-    #score = poke_db(exchanges)
     # spin up many threads if there is a lot of exchanges present in the config file
     if performance_mode:
         # request_fast will create and start the threads automatically
@@ -552,8 +786,8 @@ if __name__ == "__main__":
         prices_thread = Thread(target=request_periodically, args=(exchanges,interval))
         prices_thread.start()
     request_history_periodically(historicalExchanges, currencies, historyEnd)
-    #pruning_thread = Thread(target=prune, args=[keepWeeks])
-    #pruning_thread.start()
+    pruning_thread = Thread(target=prune, args=[keepWeeks])
+    pruning_thread.start()
     app.run()
     db.close()
 
