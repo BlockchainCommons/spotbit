@@ -21,6 +21,10 @@ Users may choose to run their own local **Spotbit** server, or simply to connect
 A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated server.
 Alternatively, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
 
+### Related Projects
+
+Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability, and self-sovereignty advantages. It works particularly well with the [Gordian system](https://github.com/BlockchainCommons/Gordian), which supports Tor connections between a [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) and a [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS) or other server installed by [Bitcoin Standup scripts](https://github.com/BlockchainCommons/Bitcoin-StandUp-Scripts).
+
 ## Status - Late Alpha
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
