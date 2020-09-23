@@ -23,7 +23,7 @@ The latest version of Spotbit includes a script called `install.sh` for installi
 
 Then the installer will install the required python3 libraries via pip. These are `ccxt` and `flask`. 
 
-After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/Spotbit`. The source code will be copied to `/home/spotbit/source`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when spotbit runs. Finally, a systemd service will be copied to `/etc/systemd/system`. 
+After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/Spotbit`. The source code will be copied to `/home/spotbit/spotbit`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when spotbit runs. Finally, a systemd service will be copied to `/etc/systemd/system`. 
 
 The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
 
@@ -186,7 +186,7 @@ The following people directly contributed to this repository. You can add your n
 | ----------------- | ------------------- | ------------------------------------------------- | ------------------------------------- | -------------------------------------------------- |
 | Christopher Allen | Principal Architect | [@ChristopherA](https://github.com/ChristopherA) | \<ChristopherA@LifeWithAlacrity.com\> | FDFE 14A5 4ECB 30FC 5D22  74EF F8D3 6C91 3574 05ED |
 | Christian Murray | Lead Developer | [@watersnake1](https://github.com/watersnake1) | \<Christian.B.Murray.21@Dartmouth.edu\> | 9A44 D707 5580 A022 8A99  8CEC 0178 C17E 95C7 BA35 |
-| Nishit | Install Script Developer | [@jodobear](https://github.com/jodobear) | \<\> | EE06 0B4A 9AED 976B 7CBD B3A0 3A9C 7E87 3028 4351 |
+| Jo | Install Script Developer | [@jodobear](https://github.com/jodobear) | \<\> | EE06 0B4A 9AED 976B 7CBD B3A0 3A9C 7E87 3028 4351 |
 | Gautham Ganesh Elango | Developer, Integration with Gordian Wallet, Testing | [@gg2001](https://github.com/gg2001) | \<gautham.gg@gmail.com\> | AB93 8223 226D 9511 4499 A6E5 420E 32E3 5B3F DBA2 |
 
 ## Responsible Disclosure
