@@ -186,6 +186,8 @@ The following people directly contributed to this repository. You can add your n
 | ----------------- | ------------------- | ------------------------------------------------- | ------------------------------------- | -------------------------------------------------- |
 | Christopher Allen | Principal Architect | [@ChristopherA](https://github.com/ChristopherA) | \<ChristopherA@LifeWithAlacrity.com\> | FDFE 14A5 4ECB 30FC 5D22  74EF F8D3 6C91 3574 05ED |
 | Christian Murray | Lead Developer | [@watersnake1](https://github.com/watersnake1) | \<Christian.B.Murray.21@Dartmouth.edu\> | 9A44 D707 5580 A022 8A99  8CEC 0178 C17E 95C7 BA35 |
+| Nishit | Install Script Developer | [@jodobear](https://github.com/jodobear) | \<\> | EE06 0B4A 9AED 976B 7CBD B3A0 3A9C 7E87 3028 4351 |
+| Gautham Ganesh Elango | Developer, Integration with Gordian Wallet, Testing | [@gg2001](https://github.com/gg2001) | \<gautham.gg@gmail.com\> | AB93 8223 226D 9511 4499 A6E5 420E 32E3 5B3F DBA2 |
 
 ## Responsible Disclosure
 
