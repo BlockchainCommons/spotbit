@@ -8,13 +8,13 @@ import sys
 import ccxt
 import os
 from threading import Thread
-from pathlib import Path 
+from pathlib import Path
 import logging
 
 #setup the logging module for file output
 log = logging.getLogger('spotbit')
 log.setLevel(logging.DEBUG)
-logFileHandler = logging.FileHandler('spotbit.log')
+logFileHandler = logging.FileHandler('/home/spotbit/.spotbit/spotbit.log')
 logFileHandler.setLevel(logging.DEBUG)
 log.addHandler(logFileHandler)
 #Config Settings
@@ -55,16 +55,16 @@ def configure_db():
 app = Flask(__name__)
 
 # split up the number of exchanges per chunk based on how many cpu cores are available
-# cpuOffset: the number of cores you want to try and utilize. 
+# cpuOffset: the number of cores you want to try and utilize.
 def optimize_chunks(cpuOffset):
     return int(len(exchanges) / (os.cpu_count()-cpuOffset))
 
-# Create a dict that contains ccxt objects for every supported exchange. 
+# Create a dict that contains ccxt objects for every supported exchange.
 # The API will query a subset of these exchanges based on what the user has specified
 # Unsupported exchanges: bitvaro phemex vaultoro
 # Future Plans:
 # Hard coding supported exchanges is a bad practice. CCXT autogenerates code for each exchange and therefore at least in theory may frequently support new exchanges.
-# Need to find a way to automatically create a list of exchange objects. 
+# Need to find a way to automatically create a list of exchange objects.
 # btctradeim doesn't want to work on raspberry pi
 def init_supported_exchanges():
     objects = {"acx":ccxt.acx(), "aofex":ccxt.aofex(), "bequant":ccxt.bequant(), "bibox":ccxt.bibox(), "bigone":ccxt.bigone(), "binance":ccxt.binance(), "bitbank":ccxt.bitbank(), "bitbay":ccxt.bitbay(), "bitfinex":ccxt.bitfinex(), "bitflyer":ccxt.bitflyer(), "bitforex":ccxt.bitforex(), "bithumb":ccxt.bithumb(), "bitkk":ccxt.bitkk(), "bitmax":ccxt.bitmax(), "bitstamp":ccxt.bitstamp(), "bittrex":ccxt.bittrex(), "bitz":ccxt.bitz(), "bl3p":ccxt.bl3p(), "bleutrade":ccxt.bleutrade(), "braziliex":ccxt.braziliex(), "btcalpha":ccxt.btcalpha(), "btcbox":ccxt.btcbox(), "btcmarkets":ccxt.btcmarkets(), "btctradeua":ccxt.btctradeua(), "bw":ccxt.bw(), "bybit":ccxt.bybit(), "bytetrade":ccxt.bytetrade(), "cex":ccxt.cex(), "chilebit":ccxt.chilebit(), "coinbase":ccxt.coinbase(), "coinbasepro":ccxt.coinbasepro(), "coincheck":ccxt.coincheck(), "coinegg":ccxt.coinegg(), "coinex":ccxt.coinex(), "coinfalcon":ccxt.coinfalcon(), "coinfloor":ccxt.coinfloor(), "coinmate":ccxt.coinmate(), "coinone":ccxt.coinone(), "crex24":ccxt.crex24(), "currencycom":ccxt.currencycom(), "digifinex":ccxt.digifinex(), "dsx":ccxt.dsx(), "eterbase":ccxt.eterbase(), "exmo":ccxt.exmo(), "exx":ccxt.exx(), "foxbit":ccxt.foxbit(), "ftx":ccxt.ftx(), "gateio":ccxt.gateio(), "gemini":ccxt.gemini(), "hbtc":ccxt.hbtc(), "hitbtc":ccxt.hitbtc(), "hollaex":ccxt.hollaex(), "huobipro":ccxt.huobipro(), "ice3x":ccxt.ice3x(), "independentreserve":ccxt.independentreserve(), "indodax":ccxt.indodax(), "itbit":ccxt.itbit(), "kraken":ccxt.kraken(), "kucoin":ccxt.kucoin(), "lakebtc":ccxt.lakebtc(), "latoken":ccxt.latoken(), "lbank":ccxt.lbank(), "liquid":ccxt.liquid(), "livecoin":ccxt.livecoin(), "luno":ccxt.luno(), "lykke":ccxt.lykke(), "mercado":ccxt.mercado(), "oceanex":ccxt.oceanex(), "okcoin":ccxt.okcoin(), "okex":ccxt.okex(), "paymium":ccxt.paymium(), "poloniex":ccxt.poloniex(), "probit":ccxt.probit(), "southxchange":ccxt.southxchange(), "stex":ccxt.stex(), "surbitcoin":ccxt.surbitcoin(), "therock":ccxt.therock(), "tidebit":ccxt.tidebit(), "tidex":ccxt.tidex(), "upbit":ccxt.upbit(), "vbtc":ccxt.vbtc(), "wavesexchange":ccxt.wavesexchange(), "whitebit":ccxt.whitebit(), "yobit":ccxt.yobit(), "zaif":ccxt.zaif(), "zb":ccxt.zb()}
@@ -202,13 +202,13 @@ def now(currency, exchange):
         try:
             cursor = db_n.execute(statement)
             res = cursor.fetchone()
-        except sqlite3.OperationalError: 
+        except sqlite3.OperationalError:
             print("database is locked. Cannot access this")
             log.error("database is locked. Cannot access this")
             return {'err': 'database locked'}
         if res != None:
             db_n.close()
-            return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]} 
+            return {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'currency_pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]}
         else:
             db_n.close()
             return fallback_to_direct(exchange, currency, db_n)
@@ -223,7 +223,7 @@ def now(currency, exchange):
             if ts != None and is_ms(int(ts[0])):
                 print(f"using ms precision for {e}")
                 logging.info(f"using ms precision for {e}")
-                ts_cutoff *= 1e3 
+                ts_cutoff *= 1e3
             statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} AND pair = '{ticker}' ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
             db_n.commit()
@@ -253,7 +253,7 @@ def list_mean(input_list):
     return avg/len(input_list)
 
 # Get data from local storage inside of a certain range.
-# Parameters: 
+# Parameters:
 #   Currency: the fiat base currency to fetch data for. Should be a three letter currency code in lowercase.
 #   Exchange: the exchange to get data from.
 #   date_start and date_end: date_start is the oldest time value in the range desired. It can be provided as a millisecond timestamp or as a datetime formatted as "YYYY-MM-DDTHH:mm:SS".
@@ -263,8 +263,8 @@ def hist(currency, exchange, date_start, date_end):
     ticker = "BTC-{}".format(currency.upper())
     #check what format of dates we have
     if (str(date_start)).isdigit():
-        date_s = int(date_start)         
-        date_e = int(date_end) 
+        date_s = int(date_start)
+        date_e = int(date_end)
     else:
         #error checking for malformed dates
         try:
@@ -283,7 +283,7 @@ def hist(currency, exchange, date_start, date_end):
         # for some exchanges we cannot use ms precision timestamps (such as coinbase)
         date_s /= 1e3
         date_e /= 1e3
-        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';" 
+        statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';"
     cursor = db_n.execute(statement)
     res = cursor.fetchall()
     db_n.close()
@@ -432,7 +432,7 @@ def request(exchanges,interval,db_n):
                             success = False
                     else:
                         try:
-                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim) #'ticker' was listed as 'symbol' before | interval should be determined in the config file 
+                            candle = ex_objs[e].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim) #'ticker' was listed as 'symbol' before | interval should be determined in the config file
                             if candle == None:
                                 raise Exception(f"candle from {e} is nulll")
                         except Exception as err:
@@ -456,7 +456,7 @@ def request(exchanges,interval,db_n):
                             except sqlite3.OperationalError as op:
                                 nulls = []
                                 c = 0
-                                # identify where the null value is 
+                                # identify where the null value is
                                 for l in line:
                                     if l == None:
                                         nulls.append(c)
@@ -491,7 +491,7 @@ def request(exchanges,interval,db_n):
                         log.info(f"[{now}] | inserted into {e} {curr} VALUE: {price['last']}")
                 time.sleep(interval)
 
-# Thread method. Makes requests every interval seconds. 
+# Thread method. Makes requests every interval seconds.
 # Adding this method here to make request more versatile while maintaining the same behavior
 def request_periodically(exchanges, interval):
     db_n = sqlite3.connect(p, timeout=30)
@@ -558,7 +558,7 @@ def request_history(exchange, currency, start_date, end_date):
         start_date += 1e4 #leaving this hardcoded for now
         start_date = int(start_date)
         time.sleep(interval)
-    
+
 # Create a thread for each exchange that needs history.
 def request_history_periodically(histExchanges, currencies, start_date):
     history_threads = []
@@ -627,7 +627,7 @@ def read_config():
             elif setting_line[0] == "interval":
                 interval = int(setting_line[1])
             elif setting_line[0] == "exchange_limit":
-                try: 
+                try:
                     exchange_limit = int((setting_line[1].replace("\n", "")))
                 except TypeError:
                     print("invalid value in exchange_limit field. Must be int")
@@ -768,7 +768,7 @@ def prune(keepWeeks):
                     except TypeError as te:
                         log.error(f"too early to prune {te}")
         time.sleep(60000)
-    
+
 
 if __name__ == "__main__":
     install() #install will call read_config
@@ -779,7 +779,7 @@ if __name__ == "__main__":
         # request_fast will create and start the threads automatically
         print("performance mode is ON")
         log.info("performance mode is ON")
-        threadResults = request_fast(exchanges, interval, chunk_size) 
+        threadResults = request_fast(exchanges, interval, chunk_size)
     else:
         print("performance mode is OFF")
         log.info("performance mode is OFF")
@@ -790,5 +790,4 @@ if __name__ == "__main__":
     pruning_thread.start()
     app.run()
     db.close()
-
 
