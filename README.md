@@ -1,47 +1,76 @@
 # Blockchain Commons Spotbit
 
-**Spotbit** allows a wallet or remote client to request price data privately from a server of their choice, or host their own price data server, leveraging the anti-correlation features of Tor. Each server automatically supports dozens of exchanges and can provide data more quickly and at higher rates than directly polling an exchange API due to Spotbit's use of a local database. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with spotbit far more secure than other price data services. 
+Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
 
-**Spotbit** functionally is a portable Flask API for Bitcoin price data and candles. Spotbit can aggregate data from over 100 exchanges and serve them from a single url or onion hidden service. The user can curate the list of exchanges and fiat currencies that the API will store data for, and decide how much data history to keep in storage. Users may choose to run their own local service, or simply connect to another user's already running service. Spotbit can be easily used with Tor and served as a hidden service.
+**Spotbit** is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor.  It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
 
-**Spotbit** is extremely flexible software. The user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep. Spotbit can be used as a repository of historical data that allows for more frequent API requests than exchanges, or as a simple wrapper around exchange APIs that allows the user to collect information over tor.
+Users may choose to run their own local **Spotbit** server, or simply to connect to another user's existing service. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with Spotbit far more secure than other price data services thanks to its anti-correlation features.
+
+**Why Use Spotbit?**
+
+1. **Privacy.** Spotbit is the only way to anoymize your Bitcoin pricing via a Tor connection.
+1. **Speed.** Spotbit provides information more quickly and at a higher rate due to the use of a local database.
+1. **Reliability.** Spotbit aggregrates information, making your pricing data more trustworthy.
+1. **Self-sovereignty.** Spotbit runs from your server (or that of your choice), saves to your database, and allows you to choose the pricing services relevant to your trading pair.
 
 ## Additional Information
 
-* At this stage, Spotbit relies on the CCXT library for API calls. In the future, some exchanges will have websocket support as well to increase the amount and accuracy of the data recieved.
+* At this stage, Spotbit relies on the CCXT library for API calls. In the future, some exchanges will have websocket support as well, to increase the amount and accuracy of the data recieved.
+
+### Test Server
+A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated server.
+Alternatively, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
+
+### Related Projects
+
+Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability, and self-sovereignty advantages. It works particularly well with the [Gordian system](https://github.com/BlockchainCommons/Gordian), which supports Tor connections between a [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) and a [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS) or other server installed by [Bitcoin Standup scripts](https://github.com/BlockchainCommons/Bitcoin-StandUp-Scripts).
 
 ## Status - Late Alpha
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
-### Installation and Usage
+## Installation Instructions
 
-#### Script Install
-The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. The script must be run as root; it will exit if the current user does not run it with `sudo`. 
+The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
+```
+$ git clone https://github.com/BlockchainCommons/spotbit.git
+$ cd spotbit
+$ chmod +x installSpotbit.sh
+```
 
-`install.sh` will set up your system to run spotbit. First, it checks if Python3.8 is being used on your system. Many linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile and install python3.8 for you.
+`installSpotbit.sh` will set up your system to run spotbit. It must be run inside a shell as a root:
+```
+$ sudo -s source ./installSpotbit.sh 
+```
 
-Then the installer will install the required python3 libraries via pip. These are `ccxt` and `flask`. 
+First, the script checks if Python3.8 is being used on your system. Many Linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile, and install python3.8 for you.
 
-After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/Spotbit`. The source code will be copied to `/home/spotbit/source`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when spotbit runs. Finally, a systemd service will be copied to `/etc/systemd/system`. 
+Then, the installer will install the required python3 libraries via pip. These are `ccxt` and `flask`. 
 
-The install script will set up a hidden service for you then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/Spotbit/hostname` as root. You do not need to use Spotbit over tor. Note: you do not need to specify the port number in the address bar if you are using Tor. 
+After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/spotbit`. The source code will be copied to `/home/spotbit/source`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when `spotbit` runs. Finally, a `systemd` service will be copied to `/etc/systemd/system`. 
 
-#### Running Spotbit
-To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported. The Flask server runs over port 5000. These are the API routes you can use:
+The install script will set up a hidden service for you, then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/spotbit/hostname` as root. You do not need to use Spotbit over tor. 
+
+> :information_source: **NOTE:** you do not need to specify the port number in the address bar if you are using Tor. 
+
+## Usage Instructions
+
+To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported, though the default setup uses fewer. 
+
+The Flask server runs over port 5000. The following API routes can be used via that port:
 
 * `/status`
     - Returns a string message if the server is running
 * `/now/<currency>/<exchange>`
     - Returns the latest candle for BTC/currency (if supported by the exchange API), or the latest spot price. 
     - currency is a three letter fiat currency (e.g. USD, JPY, etc)
-    - exchange is the name of an exchange supported by CCXT. If the exchange is already in the config file, then the newest row from your local database is returned. If the exchange is not supported, then Spotbit will directly request this exchange and return data but it will not be stored locally.
+    - exchange is the name of an exchange supported by CCXT. If the exchange is already in the config file, then the newest row from your local database is returned. If the exchange is not supported, then Spotbit will directly request this exchange and return data, but it will not be stored locally.
     - Example response:
     ```
     {"close":10314.06,"currency_pair":"BTC-USD","datetime":"2020-09-13 14:31:00","high":10315.65,"id":122983,"low":10314.06,"open":10315.65,"timestamp":1600007460000,"vol":3.53308926}
     ```
 * `/now/<currency>`
-    - Similar to above, but when the user does not specify a specific exchange (e.g. `/now/USD`)
+    - Similar to above, but the user does not specify a specific exchange (e.g. `/now/USD`)
     - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 15 minutes from present.
     - If no data are present for any exchange, then spotbit will try to make a direct request to that exchange. If that fails, then that exchange will be excluded from the average value.
     - In the response json, there will be a list called `failed_exchanges` showing which exchanges had to be excluded.
@@ -55,6 +84,9 @@ To run the server, run `sudo systemctl start spotbit`. Spotbit will then start m
     - Dates can be passed either as ISO-8601 dates (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
     - If the exchange is not present in your config file, then no data is returned.
     - Example response:
+    ```
+    {"columns":["id","timestamp","datetime","currency_pair","open","high","low","close","vol"],"data":[[718,1600804380000,"2020-09-22 12:53:00","BTC-USD",10479.3,10483.3,10479.2,10483.3,17.4109874],[719,1600804440000,"2020-09-22 12:54:00","BTC-USD",10483.3,10483.4,10483.3,10483.4,0.098285],[720,1600804500000,"2020-09-22 12:55:00","BTC-USD",10483.4,10483.4,10483.4,10483.4,0.0]]}
+```
 * `/configure`
     - Shows the current config settings for this server, including what exchanges and currencies are supported.
     - Example response:
@@ -66,8 +98,30 @@ To run the server, run `sudo systemctl start spotbit`. Spotbit will then start m
 
 You can check on a spotbit's status at any time by running `sudo systemctl status spotbit`, or take a look at the log file in `/home/spotbit/source/spotbit.log`. 
 
-#### Exchanges Used for Averaging
-For each of the listed fiat currencies, there is a list of 5 exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by ccxt, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of `spotbit.config` in order to ensure spotbit runs as smoothly as possible. The default config will include these values for you.
+### Config Options
+
+Spotbbit uses a config file located at `/home/spotbit/.spotbit/spotbit.config` to store settings. The allowed fields are:
+
+* `keepWeeks`
+    - The number of weeks worth of data to keep in the database for exchanges that you are not retrieving history for. This setting does not apply to exchanges that have a long-term history.
+* `exchanges`
+    - The exchanges you want to get current data for. They should be supplied as a list of lowercase names separated by spaces. By default, spotbit.config will include the exchanges needed to create averages for you in USD, GBP, EUR, JPY and USDT.
+* `currencies`
+    - The fiat currencies you want to get data for. They should be supplied as a list of currency codes (eg USD, AUD, CAD, etc) separated by spaces
+* `interval`
+    - The time in seconds spotbit should wait between making GET requests to API servers. This value should be between 5-15 seconds for best results.
+* `exchange_limit`
+    - The number of exchanges that can be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Increase the threshold  if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported. THE MULTITHREADING IS STILL POORLY TESTED AND MAY NOT BEHAVE PROPERLY. OMITTING THIS IS PREFERRED.
+* `averaging_time`
+    - The time window in hours that Spotbit will consider "current" when calculating an average price. It is useful to set this to at least an hour or so if you are supporting several dozen or more exchanges, because in these situations some exchanges may occasionally fall slightly behind in the request queue, depending on what you have set as your `interval` and `exchange_limit`.
+* `historicalExchanges`
+    - Exchanges that you want to request past data for in addition to current data. Should be supplied in the same format as the `exchanges` field.
+* `historyEnd`
+    - A millisecond timestamp that represents the oldest point in history you want to keep in storage.
+    
+### Exchanges Used for Averaging
+
+For each of the listed fiat currencies, there is a list of five exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of `spotbit.config` in order to ensure spotbit runs as smoothly as possible. The default config will include these values for you.
 * USD
     - coinbasepro
     - hitbtc
@@ -98,29 +152,6 @@ For each of the listed fiat currencies, there is a list of 5 exchanges that will
     - huobipro
     - bitmax
     - gateio
-
-#### Test Server
-A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated server.
-Alternatively, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
-
-#### Config Options
-Spotbbit uses a config file located at `/home/spotbit/.spotbit/spotbit.config` to change settings. The allowed fields are:
-* `keepWeeks`
-    - The number of weeks worth of data to keep in the database for exchanges that you are not retrieving history for. This setting does not apply to exchanges that have a long term history.
-* `exchanges`
-    - The exchanges you want to get current data for. They should be supplied as a list of lowercase names separated by spaces. By default, spotbit.config will include the exchanges needed to create averages for you in USD, GBP, EUR, JPY and USDT.
-* `currencies`
-    - The fiat currencies you want to get data for. They should be supplied as a list of currency codes (eg USD, AUD, CAD, etc) separated by spaces
-* `interval`
-    - The time in seconds spotbit should wait between making GET requests to API servers. This value should be between 5-15 seconds for best results.
-* `exchange_limit`
-    - The number of exchanges to allow to be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Set the threshold higher if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported. THE MULTITHREADING IS STILL POORLY TESTED AND MAY NOT BEHAVE PROPERLY. OMITTING THIS IS PREFERRED.
-* `averaging_time`
-    - The time window in hours that Spotbit will consider "current" when calculating an average price. It is useful to set this to at least an hour or so if you are supporting several dozen or more exchanges, because in these situations some exchanges may occasionally fall slightly behind in the request queue, depending on what you have set as your `interval` and `exchange_limit`.
-* `historicalExchanges`
-    - Exchanges that you want to request past data for in addition to current data. Should be supplied in the same format as the `exchanges` field.
-* `historyEnd`
-    - A millisecond timestamp that represents the oldest point in history you want to keep in storage.
 
 ## Origin, Authors, Copyright & Licenses
 
