@@ -87,6 +87,8 @@ The Flask server runs over port 5000. The following API routes can be used via t
     ```
     {"columns":["id","timestamp","datetime","currency_pair","open","high","low","close","vol"],"data":[[718,1600804380000,"2020-09-22 12:53:00","BTC-USD",10479.3,10483.3,10479.2,10483.3,17.4109874],[719,1600804440000,"2020-09-22 12:54:00","BTC-USD",10483.3,10483.4,10483.3,10483.4,0.098285],[720,1600804500000,"2020-09-22 12:55:00","BTC-USD",10483.4,10483.4,10483.4,10483.4,0.0]]}
 ```
+```
+
 * `/configure`
     - Shows the current config settings for this server, including what exchanges and currencies are supported.
     - Example response:
