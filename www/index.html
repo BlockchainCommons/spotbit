@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spotbit</title>
+</head>
+<body>
+    <h1>Spotbit: A Private Tor v3 Bitcoin Price Server</h1>
+    <p>
+        Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the <a href="https://github.com/BlockchainCommons/GordianWallet-iOS">Gordian Wallet</a> can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. Spotbit is the answer.
+Spotbit is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor.  It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
+<br>
+<br>
+Users may choose to run their own local Spotbit server, or simply to connect to another user's existing service. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with Spotbit far more secure than other price data services thanks to its anti-correlation features.
+<br>
+<br>
+
+Why Use Spotbit?
+<br>
+<br>
+
+1. Privacy: Spotbit is the only way to anoymize your Bitcoin pricing via a Tor connection.
+<br>
+<br>
+2. Speed: Spotbit provides information more quickly and at a higher rate due to the use of a local database.
+<br>
+<br>
+3. Reliability: Spotbit aggregrates information, making your pricing data more trustworthy.
+<br>
+<br>
+4. Self-sovereignty: Spotbit runs from your server (or that of your choice), saves to your database, and allows you to choose the pricing services relevant to your trading pair.
+<br>
+<br>
+    </p>
+    <h1>Servers</h1>
+    <p>
+        Spotbit is hosted at the following onion v3 addresses:
+        <br>
+        <br>
+        <code>h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion</code>
+        <br>
+        <br>
+        <code>km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion</code>
+    </p>
+
+    <h1>Exchange Averaging</h1>
+    <p>
+        For each of the listed fiat currencies, there is a list of five exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of `spotbit.config` in order to ensure spotbit runs as smoothly as possible. The default config will include these values for you.
+<br>
+<br>
+<ul>
+<li>USD
+    <ul>
+    <li>coinbasepro</li>
+    <li>hitbtc</li>
+    <li>bitfinex</li>
+    <li>kraken</li>
+    <li>bitstamp</li>
+    </ul>
+</li>
+<li>GBP
+    <ul>
+    <li>coinbasepro</li>
+    <li>coinsbank</li>
+    <li>bitstamp</li>
+    <li>kraken</li>
+    <li>cexio</li>
+    </ul>
+</li>
+<li>EUR
+    <ul>
+    <li>kraken</li>
+    <li>coinbasepro</li>
+    <li>bitfinex</li>
+    <li>bitstamp</li>
+    <li>indoex</li>
+    </ul>
+</li>
+<li>JPY
+    <ul>
+    <li>bitflyer</li>
+    <li>liquid</li>
+    <li>coincheck</li>
+    <li>bitbank</li>
+    <li>zaif</li>
+    </ul>
+</li>
+<li>USDT
+    <ul>
+    <li>binance</li>
+    <li>okex</li>
+    <li>huobipro</li>
+    <li>bitmax</li>
+    <li>gateio</li>
+    </ul>
+    </p>
+</li>
+</ul>
+<br>
+<h1>Additional Info</h1>
+<p>
+    You can find additional information about Spotbit on the Github page: <a href=https://github.com/BlockchainCommons/spotbit/edit/master/README.md">Github</a>
+</p>
+</body>
+</html>
