@@ -44,6 +44,8 @@ p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
+ONION = "" #get this value from the path
+print(f"spotbit is running at {ONION}")
 
 # Database configuration
 # We need to have the database opened manually once so that systemd can access it
@@ -98,7 +100,13 @@ log.info(f"created list of {num_exchanges}")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    date_start = (datetime.now() - timedelta(days=5)).timestamp()*1e3
+    date_end = (datetime.now()).timestamp()*1e3
+    f0 = f"{ONION}/now/USD/coinbasepro"
+    f1 = f"{ONION}/now/USD"
+    f2 = f"{ONION}/hist/USD/coinbasepro/{date_start}/{date_end}"
+    f3 = f"{ONION}/configure"
+    return render_template('index.html', fetch_0=f0,fetch_1=f1,fetch_2=f2,fetch_3=f3,date_start=date_start,date_end=date_end)
 
 # TODO: create an html page to render here
 @app.route('/status')
