@@ -505,8 +505,9 @@ cp -r $SCRIPTS_DIR ~spotbit/
 chown -R spotbit ~spotbit/spotbit
 cd ~spotbit/spotbit
 rm -rf $SCRIPTS_DIR
-# show the URL of the hidden service
+# show the URL of the hidden service & set it in bashrc
 SPOTBIT_ONION=$(cat /var/lib/tor/spotbit/hostname)
+echo "export ONION=$SPOTBIT_ONION" >> .bashrc
 echo "
 *******************************************************************************
 $MESSAGE_PREFIX Spotbit has been configured. Start spotbit server like so:
