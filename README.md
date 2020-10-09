@@ -29,7 +29,25 @@ Spotbit can be used by anyone who wants to take advantage of its privacy, speed,
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
-## Installation Instructions
+
+### Roadmap
+June 2020
+* Completion of research and planning.
+
+August 2020
+* Completed first working setup, began alpha testing.
+
+September 2020
+* Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
+
+Late 2020
+* Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
+
+Late 2020/ Early 2021
+* Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
+
+## Installation and Usage
+### Installation Instructions
 
 The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
 ```
@@ -42,6 +60,7 @@ $ chmod +x installSpotbit.sh
 ```
 $ sudo -s source ./installSpotbit.sh 
 ```
+
 
 First, the script checks if Python3.8 is being used on your system. Many Linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile, and install python3.8 for you.
 
