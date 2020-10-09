@@ -284,15 +284,13 @@ def hist(currency, exchange, date_start, date_end):
         date_s /= 1e3
         date_e /= 1e3
         statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';"
-    cursor = None
     # keep trying in case of database locked error
     while True:
         try:
             cursor = db_n.execute(statement)
+            break
         except sqlite3.OperationalError as oe:
             time.sleep(5)
-        if cursor != None:
-            break
         
     res = cursor.fetchall()
     db_n.close()
@@ -326,8 +324,13 @@ def hist_single_dates(currency, exchange, dates):
             ts /= 1e3
         statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp ASC;"
         # right now we return everything
-        cursor = db_n.execute(statement)
-        res = cursor.fetchall()[0]
+        while True:
+            try:
+                cursor = db_n.execute(statement)
+                res = cursor.fetchall()[0]
+                break
+            except sqlite3.OperationalError:
+                time.sleep(2)
         if res != None:
             results[f"{d}"] = {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]}
         else:
