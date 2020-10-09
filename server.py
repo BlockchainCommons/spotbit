@@ -44,7 +44,7 @@ p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
-ONION = "" #get this value from the path
+ONION = os.environ["ONION"] #get this value from the path
 print(f"spotbit is running at {ONION}")
 
 # Database configuration
