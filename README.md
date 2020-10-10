@@ -89,8 +89,8 @@ The Flask server runs over port 5000. The following API routes can be used via t
     {"close":10314.06,"currency_pair":"BTC-USD","datetime":"2020-09-13 14:31:00","high":10315.65,"id":122983,"low":10314.06,"open":10315.65,"timestamp":1600007460000,"vol":3.53308926}
     ```
 * `/now/<currency>`
-    - Similar to above, but the user does not specify a specific exchange (e.g. `/now/USD`)
-    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 15 minutes from present.
+    - Similar to above, but when the user does not specify a specific exchange (e.g. `/now/USD`)
+    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 1 hour from present.
     - If no data are present for any exchange, then spotbit will try to make a direct request to that exchange. If that fails, then that exchange will be excluded from the average value.
     - In the response json, there will be a list called `failed_exchanges` showing which exchanges had to be excluded.
     - Example response:
@@ -191,9 +191,6 @@ This table below also establishes provenance (repository of origin, permalink, a
 To use Spotbit you'll need to use the following tools:
 
 - Python3.8 or higher (some libraries don't work as needed on older versions of Python)
-To build  Spotbit you'll need to use the following tools:
-
-- Python3.8 or higher
 - Pip
 - Flask
 - CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)

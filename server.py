@@ -28,7 +28,7 @@ interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 200 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
-averaging_time = 4 # the number of hours that we should average information over
+averaging_time = 1 # the number of hours that we should average information over
 historyEnd = 0
 on_demand = False # whether or not we are caching data
 score = 0 #the current percent of empty tables
@@ -150,7 +150,7 @@ def average_price_value(tuple_list, tuple_length, ticker):
     running_sums = [0] * tuple_length
     oldest_timestamp = 1e13
     for tup in tuple_list:
-        if tup[1] < oldest_timestamp:
+        if tup != None and tup[1] < oldest_timestamp:
             oldest_timestamp = tup[1]
         for i in range(0,tuple_length):
             if i > 3:
@@ -162,6 +162,7 @@ def average_price_value(tuple_list, tuple_length, ticker):
 # return an average of the 5 curated exchanges for that currency
 @app.route('/now/<currency>')
 def now_noex(currency):
+    global averaging_time
     db_n = sqlite3.connect(p, timeout=30)
     currency = currency.upper()
     ticker = f"BTC-{currency}"
@@ -175,7 +176,7 @@ def now_noex(currency):
             cursor = db_n.execute(ms_check)
             res = cursor.fetchone()
             # only take values from within 15 min of present
-            ts_delta = (datetime.now() - timedelta(minutes=15)).timestamp()
+            ts_delta = (datetime.now() - timedelta(hours=averaging_time)).timestamp()
             if res!= None and is_ms(int(res[0])):
                 ts_delta *= 1e3
             statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {ts_delta} ORDER BY timestamp DESC LIMIT 1;"
