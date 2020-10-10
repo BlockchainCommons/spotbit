@@ -44,9 +44,13 @@ p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
-ONION = os.environ["ONION"] #get this value from the path
-print(f"spotbit is running at {ONION}")
-
+ONION = ""
+try:
+    ONION = os.environ["ONION"] #get this value from the path
+    print(f"spotbit is running at {ONION}")
+except Exception as e:
+    print(f"cant find ONION in PATH {e}")
+    
 # Database configuration
 # We need to have the database opened manually once so that systemd can access it
 def configure_db():
