@@ -42,7 +42,7 @@ To run the server, run `sudo systemctl start spotbit`. Spotbit will then start m
     ```
 * `/now/<currency>`
     - Similar to above, but when the user does not specify a specific exchange (e.g. `/now/USD`)
-    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 15 minutes from present.
+    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 1 hour from present.
     - If no data are present for any exchange, then spotbit will try to make a direct request to that exchange. If that fails, then that exchange will be excluded from the average value.
     - In the response json, there will be a list called `failed_exchanges` showing which exchanges had to be excluded.
     - Example response:
@@ -139,9 +139,6 @@ This table below also establishes provenance (repository of origin, permalink, a
 To use Spotbit you'll need to use the following tools:
 
 - Python3.8 or higher (some libraries don't work as needed on older versions of Python)
-To build  Spotbit you'll need to use the following tools:
-
-- Python3.8 or higher
 - Pip
 - Flask
 - CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
