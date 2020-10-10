@@ -5,4 +5,23 @@
 <h2>How do I use Spotbit?</h2>
 <p>Spotbit is an API service running on this server. To access it, you can use the API endpoints it provides: /configure will give you information on how this server is configured. /now/[currency]/[exchange] will give you the current information about a certain currency. And /hist/[currency]/[exchange]/[start_date]/[end_date] gives historical data.</currency></p>
 <p>You can find out more about how to use Spotbit <a href="https://github.com/BlockchainCommons/spotbit">here</a></p>
+<h2>Example Usage</h2>
+<h3>Fetching current data for a specific currency and exchange</h3>
+<p>Currency: USD, Exchange: Coinbasepro
+    <a href="{{ fetch_0 }}">/now/USD/coinbasepro</a>
+</p>
+<h3>Fetching current averaged data for a currency</h3>
+<p>Currency: USD. Spotbit takes the simple average of the 5 exchanges listed in the <a href="https://github.com/BlockchainCommons/spotbit">README</a> for a currency. The data returned is an average open price, average high price, average low price, and average close price. 
+    <a href="{{ fetch_1 }}">/now/USD</a>
+    <h4>Example Response:</h4>
+    <p>{"close":10596.524000000001,"currency_pair":"BTC-USD","datetime":"Fri, 02 Oct 2020 02:14:14 GMT","exchanges":["coinbasepro","okcoin","bitfinex","kraken","bitstamp"],"failed_exchanges":[],"high":10597.35,"id":"average_value","low":10595.653379728,"oldest_timestamp":1601604420000,"open":10596.451379728,"timestamp":1601604854227.924,"volume":0.41027291399999993}</p>
+</p>
+<h3>Fetching historical data</h3>
+<p>Currency: USD, Exchange: Coinbasepro, Time Range: {{ date_start }} to {{ date_end }}
+    <a href="{{ fetch_2 }}">/hist/USD/coinbasepro/{{ date_start}}/{{ date_end }}</a>
+</p>
+<h3>Viewing the server's configuration</h3>
+<p>
+    <a href="{{ fetch_3 }}">/configure</a>
+</p>
 </html>
