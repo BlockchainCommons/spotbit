@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -30,7 +31,7 @@
         <nav class="crypto-navigation">
   <a href="index.html" class="crypto-navigation__logo">
     <!-- Image element or even SVG can be used here -->
-    <img src="assets/images/bc.png" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+    <img src="assets/images/spotbit.jpg" height="40" alt="Crypto" class="crypto-navigation__logo-image">
   </a>
   <ul class="crypto-navigation__list">
       <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
@@ -52,7 +53,10 @@
         </a>
       </li>
   </ul>
-</nav>
+  <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
+	  <img src="assets/images/bc.png" height="40" alt="Crypto" class"crypto-navigation__logo-image">
+   </a>
+	</nav>
 
 
       </div>
@@ -69,7 +73,7 @@
           </h2>
           <div class="crypto-widget__content">
             <div class="crypto-wallet-overview">
-	      <div>Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the Gordian Wallet can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. Spotbit is the answer. Spotbit is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor. It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
+	      <div>Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the Gordian Wallet can communicate with Bitcoin Core through Tor, Bitcoin price services traditially have not. This creates a potential red flag in a state that is antagonistic toward Bitcoin. Spotbit is the answer. It is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that permits the user to collect information over Tor. It can aggregate data from over 100 exchanges and serve them from a single URL or as onion hidden service using Tor. Spotbit is extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR, etc.), which exchanges to keep data for, and how much data to keep.
 </div>
               <span class="crypto-wallet-overview__market-value mdc-theme--primary"></span>
             </div>
@@ -84,7 +88,7 @@
 		 <ul class="crypto-border-list">
               <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
                 <!-- BTC WALLET -->
-                <a href="wallet.html" class="mdc-theme--on-surface">
+                <a href="#" class="mdc-theme--on-surface">
                   <h3 class="crypto-wallet__name mdc-typography--overline">Privacy</h3>
                   <h1 class="crypto-wallet__value mdc-typography--headline3">anoymize your pricing</h1>
                   <span class="crypto-coin__border mdc-theme--primary-bg"></span>
@@ -93,7 +97,7 @@
               </li>
               <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
                 <!-- BTC WALLET -->
-                <a href="wallet.html" class="mdc-theme--on-surface">
+                <a href="#" class="mdc-theme--on-surface">
                   <h4 class="crypto-wallet__name mdc-typography--overline">Speed</h4>
                   <h2 class="crypto-wallet__value mdc-typography--headline3">higher rate data</h2>
                   <span class="crypto-coin__border mdc-theme--primary-600-bg"></span>
@@ -102,7 +106,7 @@
               </li>
               <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
                 <!-- BTC WALLET -->
-                <a href="wallet.html" class="mdc-theme--on-surface">
+                <a href="#" class="mdc-theme--on-surface">
                   <h4 class="crypto-wallet__name mdc-typography--overline">Self-sovereignty</h4>
                   <h2 class="crypto-wallet__value mdc-typography--headline3">choose the pricing services</h2>
                   <span class="crypto-coin__border mdc-theme--primary-800-bg"></span>
@@ -161,7 +165,7 @@
                   <td class="mdl-data-table__cell--non-numeric">USD - GBP - EUR - </td>
                   <td class="mdl-data-table__cell--non-numeric">api-public.sandbox.pro.coinbase.com</td>
                   <td><span class="crypto-transactions-list__item-price"></span></td>
-                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--pending">Pending</td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--pending"><div id="coinbase"></div></td>
                 </tr>
                 <tr class="crypto-transactions-list__item--details">
                   <td colspan="7">
@@ -208,7 +212,7 @@
                   <td class="mdl-data-table__cell--non-numeric">USD - EUR - </td>
                   <td class="mdl-data-table__cell--non-numeric">api-pub.bitfinex.com/v2</td>
                   <td><span class="crypto-transactions-list__item-price"></span></td>
-                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed">Confirmed</td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="bitfinex"></div></td>
                 </tr>
                 <tr class="crypto-transactions-list__item--details">
                   <td colspan="7">
@@ -246,6 +250,7 @@
                 </tr>
 
               </tbody>
+
               <tbody class="crypto-transactions-list__separator">
                 <tr><td colspan="7"></td></tr></tbody>
               <tbody>
@@ -255,7 +260,7 @@
                   <td class="mdl-data-table__cell--non-numeric">USD - EUR - GBP - </td>
                   <td class="mdl-data-table__cell--non-numeric">api.kraken.io/v1/</td>
                   <td><span class="crypto-transactions-list__item-price"></span></td>
-                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed">Confirmed</td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="kraken"></div></td>
                 </tr>
                 <tr class="crypto-transactions-list__item--details">
                   <td colspan="7">
@@ -291,18 +296,18 @@
                     </div>
                   </td>
                 </tr>
-
               </tbody>
+
               <tbody class="crypto-transactions-list__separator">
                 <tr><td colspan="7"></td></tr></tbody>
               <tbody>
                 <tr class="crypto-transactions-list__item">
                   <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
-                  <td class="mdl-data-table__cell--non-numeric"></td>
-                  <td class="mdl-data-table__cell--non-numeric"></td>
-                  <td class="mdl-data-table__cell--non-numeric"></td>
+                  <td class="mdl-data-table__cell--non-numeric">Gemini</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR</td>
+                  <td class="mdl-data-table__cell--non-numeric">https://api.gemini.com/v1/</td>
                   <td><span class="crypto-transactions-list__item-price"></span></td>
-                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed">Confirmed</td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="gemini"></div></td>
                 </tr>
                 <tr class="crypto-transactions-list__item--details">
                   <td colspan="7">
@@ -338,8 +343,56 @@
                     </div>
                   </td>
                 </tr>
-
               </tbody>
+
+	       <tbody class="crypto-transactions-list__separator">
+                <tr><td colspan="7"></td></tr></tbody>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">Bitstamp</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR</td>
+                  <td class="mdl-data-table__cell--non-numeric">https://api.gemini.com/v1/</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="bitstamp"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+
+
             </table>
           </div><!-- cryto-widget end -->
           <div class="mdc-snackbar mdc-elevation--z24"
@@ -483,9 +536,13 @@
                 document.getElementById("chart_div")
             );
 	    chart.draw(data, options);
+            var ex = ['coinbase','gemini','kraken','bitstamp','bitfinex'];
+            for (i=0;i<ex.length;i++){
+		getPrice(ex[i]);
+            }
             setInterval(function(){
                 $.ajax({
-                      url: 'http://localhost:5000/now/usd/coinbase',
+                      url: 'proxy.php',
                       dataType: 'json',
                       cache: true,
                       success: function(data1) {
@@ -504,6 +561,28 @@
                 });
             },10000);
         }
+
+	function getPrice(exchange){
+		console.log(exchange);
+		$.ajax({
+                      url: 'proxy.php?exchange='+exchange,
+                      dataType: 'json',
+                      cache: true,
+                      success: function(data) {
+                        var data2 = JSON.parse('['+JSON.stringify(data)+']');
+                        var arr = data2[0];
+                        console.log(arr[0]);
+                        var b = arr[0];
+                        console.log('Exchange:' + exchange + ' Price: ' + b.close);
+			$('#'+exchange).html(b.close);
+                      },
+                function (xhr, ajaxOptions, thrownError) {
+                      alert(xhr.status);
+                      alert(thrownError);
+                   }
+                });
+	}
     </script>
   </body>
 </html>
+
