@@ -28,7 +28,7 @@ interval = 10 #time to wait between GET requests to servers, to avoid ratelimits
 keepWeeks = 3 # add this to the config file
 exchange_limit = 200 #when there are more exchanges than this multithreading is ideal
 performance_mode = False
-averaging_time = 4 # the number of hours that we should average information over
+averaging_time = 1 # the number of hours that we should average information over
 historyEnd = 0
 on_demand = False # whether or not we are caching data
 score = 0 #the current percent of empty tables
@@ -44,7 +44,13 @@ p = Path("/home/spotbit/.spotbit/sb.db")
 db = sqlite3.connect(p)
 print(f"db opened in {p}")
 log.debug(f"db opened in {p}")
-
+ONION = ""
+try:
+    ONION = os.environ["ONION"] #get this value from the path
+    print(f"spotbit is running at {ONION}")
+except Exception as e:
+    print(f"cant find ONION in PATH {e}")
+    
 # Database configuration
 # We need to have the database opened manually once so that systemd can access it
 def configure_db():
@@ -98,7 +104,13 @@ log.info(f"created list of {num_exchanges}")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    date_start = (datetime.now() - timedelta(days=5)).timestamp()*1e3
+    date_end = (datetime.now()).timestamp()*1e3
+    f0 = f"{ONION}/now/USD/coinbasepro"
+    f1 = f"{ONION}/now/USD"
+    f2 = f"{ONION}/hist/USD/coinbasepro/{date_start}/{date_end}"
+    f3 = f"{ONION}/configure"
+    return render_template('index.html', fetch_0=f0,fetch_1=f1,fetch_2=f2,fetch_3=f3,date_start=date_start,date_end=date_end)
 
 # TODO: create an html page to render here
 @app.route('/status')
@@ -142,7 +154,7 @@ def average_price_value(tuple_list, tuple_length, ticker):
     running_sums = [0] * tuple_length
     oldest_timestamp = 1e13
     for tup in tuple_list:
-        if tup[1] < oldest_timestamp:
+        if tup != None and tup[1] < oldest_timestamp:
             oldest_timestamp = tup[1]
         for i in range(0,tuple_length):
             if i > 3:
@@ -154,6 +166,7 @@ def average_price_value(tuple_list, tuple_length, ticker):
 # return an average of the 5 curated exchanges for that currency
 @app.route('/now/<currency>')
 def now_noex(currency):
+    global averaging_time
     db_n = sqlite3.connect(p, timeout=30)
     currency = currency.upper()
     ticker = f"BTC-{currency}"
@@ -167,7 +180,7 @@ def now_noex(currency):
             cursor = db_n.execute(ms_check)
             res = cursor.fetchone()
             # only take values from within 15 min of present
-            ts_delta = (datetime.now() - timedelta(minutes=15)).timestamp()
+            ts_delta = (datetime.now() - timedelta(hours=averaging_time)).timestamp()
             if res!= None and is_ms(int(res[0])):
                 ts_delta *= 1e3
             statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {ts_delta} ORDER BY timestamp DESC LIMIT 1;"
@@ -284,7 +297,14 @@ def hist(currency, exchange, date_start, date_end):
         date_s /= 1e3
         date_e /= 1e3
         statement = f"SELECT * FROM {exchange} WHERE timestamp > {date_s} AND timestamp < {date_e} AND pair = '{ticker}';"
-    cursor = db_n.execute(statement)
+    # keep trying in case of database locked error
+    while True:
+        try:
+            cursor = db_n.execute(statement)
+            break
+        except sqlite3.OperationalError as oe:
+            time.sleep(5)
+        
     res = cursor.fetchall()
     db_n.close()
     return {'columns': ['id', 'timestamp', 'datetime', 'currency_pair', 'open', 'high', 'low', 'close', 'vol'], 'data':res}
@@ -317,8 +337,13 @@ def hist_single_dates(currency, exchange, dates):
             ts /= 1e3
         statement = f"SELECT * FROM {exchange} WHERE pair = '{ticker}' AND timestamp > {lower_bound} AND timestamp > {upper_bound} ORDER BY timestamp ASC;"
         # right now we return everything
-        cursor = db_n.execute(statement)
-        res = cursor.fetchall()[0]
+        while True:
+            try:
+                cursor = db_n.execute(statement)
+                res = cursor.fetchall()[0]
+                break
+            except sqlite3.OperationalError:
+                time.sleep(2)
         if res != None:
             results[f"{d}"] = {'id':res[0], 'timestamp':res[1], 'datetime':res[2], 'pair':res[3], 'open':res[4], 'high':res[5], 'low':res[6], 'close':res[7], 'vol':res[8]}
         else:

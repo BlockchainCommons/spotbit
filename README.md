@@ -29,7 +29,25 @@ Spotbit can be used by anyone who wants to take advantage of its privacy, speed,
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
-## Installation Instructions
+
+### Roadmap
+June 2020
+* Completion of research and planning.
+
+August 2020
+* Completed first working setup, began alpha testing.
+
+September 2020
+* Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
+
+Late 2020
+* Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
+
+Late 2020/ Early 2021
+* Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
+
+## Installation and Usage
+### Installation Instructions
 
 The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
 ```
@@ -42,6 +60,7 @@ $ chmod +x installSpotbit.sh
 ```
 $ sudo -s source ./installSpotbit.sh 
 ```
+
 
 First, the script checks if Python3.8 is being used on your system. Many Linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile, and install python3.8 for you.
 
@@ -70,8 +89,8 @@ The Flask server runs over port 5000. The following API routes can be used via t
     {"close":10314.06,"currency_pair":"BTC-USD","datetime":"2020-09-13 14:31:00","high":10315.65,"id":122983,"low":10314.06,"open":10315.65,"timestamp":1600007460000,"vol":3.53308926}
     ```
 * `/now/<currency>`
-    - Similar to above, but the user does not specify a specific exchange (e.g. `/now/USD`)
-    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 15 minutes from present.
+    - Similar to above, but when the user does not specify a specific exchange (e.g. `/now/USD`)
+    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 1 hour from present.
     - If no data are present for any exchange, then spotbit will try to make a direct request to that exchange. If that fails, then that exchange will be excluded from the average value.
     - In the response json, there will be a list called `failed_exchanges` showing which exchanges had to be excluded.
     - Example response:
@@ -172,9 +191,6 @@ This table below also establishes provenance (repository of origin, permalink, a
 To use Spotbit you'll need to use the following tools:
 
 - Python3.8 or higher (some libraries don't work as needed on older versions of Python)
-To build  Spotbit you'll need to use the following tools:
-
-- Python3.8 or higher
 - Pip
 - Flask
 - CCXT - ![CryptoCurrency eXchange Tools](https://github.com/ccxt/ccxt)
