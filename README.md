@@ -1,6 +1,6 @@
 # Blockchain Commons Spotbit
 
-![](images/logos/spotbit-screen.png)
+![](images/logos/spotbit-screen.jpg)
 
 Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
 
