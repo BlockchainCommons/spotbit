@@ -216,8 +216,8 @@ def now(currency, exchange):
             cursor = db_n.execute(statement)
             res = cursor.fetchone()
         except sqlite3.OperationalError:
-            print("database is locked. Cannot access this")
-            log.error("database is locked. Cannot access this")
+            print("database is locked. Cannot access it")
+            log.error("database is locked. Cannot access it")
             return {'err': 'database locked'}
         if res != None:
             db_n.close()
@@ -234,8 +234,8 @@ def now(currency, exchange):
             db_n.commit()
             ts = cursor.fetchone()
             if ts != None and is_ms(int(ts[0])):
-                print(f"using ms precision for {e}")
-                logging.info(f"using ms precision for {e}")
+                print(f"using millisecond precision for {e}")
+                logging.info(f"using millisecond precision for {e}")
                 ts_cutoff *= 1e3
             statement = f"SELECT timestamp, close FROM {e} WHERE timestamp > {ts_cutoff} AND pair = '{ticker}' ORDER BY timestamp LIMIT 1;"
             cursor = db_n.execute(statement)
@@ -284,7 +284,7 @@ def hist(currency, exchange, date_start, date_end):
             date_s = (datetime.fromisoformat(date_start.replace("T", " "))).timestamp()*1000
             date_e = (datetime.fromisoformat(date_end.replace("T", " "))).timestamp()*1000
         except Exception:
-            return "malformed dates. Use YYYY-MM-DDTHH:mm:SS or millisecond timestamps. Provide both dates in the same format"
+            return "malformed dates. Provide both dates in the same format: use YYYY-MM-DDTHH:mm:SS or millisecond timestamps"
     # check the table we want to select from to see the precision of it
     check = f"SELECT timestamp FROM {exchange} ORDER BY timestamp DESC LIMIT 1;"
     cursor = db_n.execute(check)
@@ -383,14 +383,14 @@ def request_single(exchange, currency):
             try:
                 result = ex_objs[exchange].fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, params=params)
             except Exception as e:
-                print(f"got an error requesting to {exchange}: {e}")
-                logging.error(f"got an error requesting to {exchange}: {e}")
+                print(f"got an error requesting info from {exchange}: {e}")
+                logging.error(f"got an error requesting info frm {exchange}: {e}")
         else:
             try:
                 result = obj.fetch_ohlcv(symbol=ticker, timeframe=tframe, since=None, limit=lim)
             except Exception as e:
-                print(f"got an error requesting to {exchange}: {e}")
-                logging.error(f"got an error requesting to {exchange}: {e}")
+                print(f"got an error requesting info from {exchange}: {e}")
+                logging.error(f"got an error requesting info from {exchange}: {e}")
     else:
         try:
             result = obj.fetch_ticker(ticker)
@@ -637,8 +637,8 @@ def read_config():
                     if e not in exchanges and is_supported(e) == True:
                         exchanges.append(e)
                     else:
-                        print(f"{e} is not supported by ccxt!")
-                        log.error(f"{e} is not supported by ccxt!")
+                        print(f"{e} is not supported by CCXT!")
+                        log.error(f"{e} is not supported by CCXT!")
             elif setting_line[0] == "currencies":
                 currs = setting_line[1].split(" ")
                 for c in currs:
@@ -655,14 +655,14 @@ def read_config():
                 try:
                     exchange_limit = int((setting_line[1].replace("\n", "")))
                 except TypeError:
-                    print("invalid value in exchange_limit field. Must be int")
-                    log.error("invalid value in exchange_limit field. Must be int")
+                    print("invalid value in exchange_limit field. Must be an integer")
+                    log.error("invalid value in exchange_limit field. Must be an integer")
             elif setting_line[0] == "averaging_time":
                 try:
                     averaging_time = int((setting_line[1]).replace("\n", ""))
                 except TypeError:
-                    print("invalid value in averaging_time field. Must be int (number of hours)")
-                    log.error("invalid value in averaging_time field. Must be int (number of hours)")
+                    print("invalid value in averaging_time field. Must be an integer (number of hours)")
+                    log.error("invalid value in averaging_time field. Must be an integer (number of hours)")
             elif setting_line[0] == "historicalExchanges":
                 hists = setting_line[1].split(" ")
                 for h in hists:
@@ -674,8 +674,8 @@ def read_config():
                 try:
                     historyEnd = int((setting_line[1]).replace("\n", ""))
                 except TypeError:
-                    print("invalid value in historyEnd. Must be ms timestamp (int)")
-                    log.error("invalid value in historyEnd. Must be ms timestamp (int)")
+                    print("invalid value in historyEnd. Must be millisecond timestamp (integer)")
+                    log.error("invalid value in historyEnd. Must be millisecond timestamp (integer)")
             else:
                 return
     #print statement for debugging
