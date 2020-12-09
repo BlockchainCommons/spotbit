@@ -1,5 +1,7 @@
 # Blockchain Commons Spotbit
 
+### _by Christian Murray and Christopher Allen with Jo_
+
 ![](images/logos/spotbit-screen.jpg)
 
 Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
@@ -31,7 +33,6 @@ Spotbit can be used by anyone who wants to take advantage of its privacy, speed,
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
-
 ### Roadmap
 June 2020
 * Completion of research and planning.
@@ -48,8 +49,7 @@ Late 2020
 Late 2020/ Early 2021
 * Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
 
-## Installation and Usage
-### Installation Instructions
+## Installation Instructions
 
 The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
 ```
