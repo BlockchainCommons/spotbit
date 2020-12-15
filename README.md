@@ -1,6 +1,7 @@
 # Blockchain Commons Spotbit
 
-### _by Christian Murray and Christopher Allen with Jo_
+### _by [Christian Murray](https://github.com/watersnake1) and [Christopher Allen](https://github.com/ChristopherA) with [Jo](https://github.com/jodobear)_
+* <img src="https://raw.githubusercontent.com/BlockchainCommons/torgap/master/images/logos/torgap.png" width=30 valign="bottom"> ***uses [torgap](https://github.com/BlockchainCommons/torgap/blob/master/README.md) technology***
 
 ![](images/logos/spotbit-screen.jpg)
 
