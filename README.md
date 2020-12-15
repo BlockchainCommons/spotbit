@@ -2,7 +2,6 @@
 
 ### _by [Christian Murray](https://github.com/watersnake1) and [Christopher Allen](https://github.com/ChristopherA) with [Jo](https://github.com/jodobear)_
 * <img src="https://raw.githubusercontent.com/BlockchainCommons/torgap/master/images/logos/torgap.png" width=30 valign="bottom"> ***uses [torgap](https://github.com/BlockchainCommons/torgap/blob/master/README.md) technology***
-
 ![](images/logos/spotbit-screen.jpg)
 
 Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
