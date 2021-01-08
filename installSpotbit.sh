@@ -187,14 +187,10 @@ SYS_SSH_IP....: $SYS_SSH_IP
 # prompt user before continuing with installation
 if ! "$NOPROMPT"; then
   read -rp  "Continue with installation? (Y/n): " confirm
-fi
-
-if [[ "$confirm" != [yY] ]]; then
-  echo "Entered $confirm. Exiting.."
-  return 4
-else
-  NOPROMPT=true
-  echo "Installing Bitcoin!"
+  if [[ "$confirm" != [yY] ]]; then
+    echo "Entered $confirm. Exiting.."
+    return 4
+  fi
 fi
 
 
