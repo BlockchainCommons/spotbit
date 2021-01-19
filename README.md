@@ -1,6 +1,7 @@
 # Blockchain Commons Spotbit
 
 ### _by [Christian Murray](https://github.com/watersnake1) and [Christopher Allen](https://github.com/ChristopherA) with [Jo](https://github.com/jodobear)_
+* <img src="https://github.com/BlockchainCommons/Gordian/blob/master/Images/logos/gordian-icon.png" width=16 valign="bottom"> ***part of the [gordian](https://github.com/BlockchainCommons/gordian/blob/master/README.md) technology family***
 * <img src="https://raw.githubusercontent.com/BlockchainCommons/torgap/master/images/logos/torgap.png" width=30 valign="bottom"> ***uses [torgap](https://github.com/BlockchainCommons/torgap/blob/master/README.md) technology***
 ![](images/logos/spotbit-screen.jpg)
 
