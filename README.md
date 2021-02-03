@@ -24,7 +24,6 @@ Users may choose to run their own local **Spotbit** server, or simply to connect
 
 ### Test Server
 A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated server.
-Alternatively, you can use our test server at `km3danfmt7aiqylbq5lhyn53zhv2hhbmkr6q5pjc64juiyuxuhcsjwyd.onion`. This server will have the latest bugfixes on it, but may not have 100% uptime. 
 
 ### Related Projects
 
