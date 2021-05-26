@@ -29,6 +29,17 @@ A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd
 
 Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability, and self-sovereignty advantages. It works particularly well with the [Gordian system](https://github.com/BlockchainCommons/Gordian), which supports Tor connections between a [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) and a [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS) or other server installed by [Bitcoin Standup scripts](https://github.com/BlockchainCommons/Bitcoin-StandUp-Scripts).
 
+## Gordian Principles
+
+Spotbit is an example of a microservices meant to display how the [Gordian Principles](https://github.com/BlockchainCommons/Gordian#gordian-principles), which are philosophical and technical underpinnings to Blockchain Commons' Gordian technology, are supported by the Gordian Architecture. This includes:
+
+* **Independence.** Users can choose which applications to use within an open ecosystem.
+* **Privacy.** Airgaps provide data with strong protection, while torgaps do the same for networked interactions.
+* **Resilience.** The paritioned design minimizes Single Points of Compromise.
+* **Openness.** Airgaps and torgaps are connected via standard specifications such as URs, which allow anyone to add apps to the ecosystem.
+
+Blockchain Commons apps do not phone home and do not run ads. Some are available through various app stores; all are available in our code repositories for your usage.
+
 ## Status - Late Alpha
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
