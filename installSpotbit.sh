@@ -440,6 +440,12 @@ fi
 
 
 ####
+# 6.1.  Cap the log size of journald
+####
+sed -i -e 's/#SystemMaxUse=/SystemMaxUse=50M/g' /etc/systemd/journald.conf
+systemctl restart systemd-journald
+
+####
 # 7. Setup systemd service
 ####
 
