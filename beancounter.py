@@ -21,7 +21,7 @@ import time
 from pydantic import BaseModel
 import requests
 
-import app
+import app as spotbit
 
 # bdk seems limited. Things I want to be able to do:
 # - generate a descriptor from an extended key.

@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 # we can determine which ones shouldn't be supported i.e. populate
 # this list with exchanges that fail tests.
 _unsupported_exchanges = []     
-_supported_exchanges: dict[str, ccxt.Exchange] =  {} 
+supported_exchanges: dict[str, ccxt.Exchange] =  {} 
 
 def get_logger():
 
@@ -93,15 +93,15 @@ assert _settings.exchanges
 logger.info('Initialising supported exchanges.')
 for e in _settings.exchanges:
     if e in ccxt.exchanges and e not in _unsupported_exchanges:
-        _supported_exchanges[e] = ccxt.__dict__[e]() 
+        supported_exchanges[e] = ccxt.__dict__[e]() 
         try:
-            if app.debug is False: _supported_exchanges[e].load_markets()
+            if app.debug is False: supported_exchanges[e].load_markets()
         except Exception as e:
             logger.debug(f'Error loading markets for {e}.')
 
-assert _supported_exchanges
+assert supported_exchanges
 
-ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in _supported_exchanges]) 
+ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in supported_exchanges]) 
 
 # Exchange data is sometimes returned as epoch milliseconds.
 def is_ms(timestamp): return timestamp % 1e3 == 0
@@ -309,7 +309,7 @@ async def get_exchanges():
 
     result: list[ExchangeDetails] = []
 
-    assert _supported_exchanges
+    assert supported_exchanges
 
     def get_exchange_details(exchange: ccxt.Exchange) -> ExchangeDetails:
 
@@ -334,7 +334,7 @@ async def get_exchanges():
         return result
 
     tasks = [asyncio.to_thread(get_exchange_details, exchange) 
-            for exchange in _supported_exchanges.values()]
+            for exchange in supported_exchanges.values()]
     details = await asyncio.gather(*tasks)
 
     result = list(details)
@@ -374,7 +374,7 @@ async def now_average(currency: CurrencyName):
         return result
 
     tasks = [asyncio.to_thread(get_candle, exchange, currency)
-            for exchange in _supported_exchanges.values()]
+            for exchange in supported_exchanges.values()]
     task_results = await asyncio.gather(*tasks)
     logger.debug(f'task results: {task_results}')
 
@@ -395,7 +395,7 @@ async def now_average(currency: CurrencyName):
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail      =  'Spotbit could get any candle data from the configured exchanges.')
 
-    exchanges_used = [exchange.name for exchange in _supported_exchanges.values()
+    exchanges_used = [exchange.name for exchange in supported_exchanges.values()
             if exchange.name not in failed_exchanges]
 
     result = PriceResponse(
@@ -414,14 +414,14 @@ def now(currency: CurrencyName, exchange: ExchangeName):
         currency: the symbol for the base currency to use e.g. USD, GBP, UST.
     '''
 
-    if exchange.value not in _supported_exchanges:
+    if exchange.value not in supported_exchanges:
         raise HTTPException(
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail      = f'Spotbit is not configured to use {exchange.value} exchange.')
 
     result      = None
 
-    ccxt_exchange    = _supported_exchanges[exchange.value]
+    ccxt_exchange    = supported_exchanges[exchange.value]
     assert ccxt_exchange
     ccxt_exchange.load_markets()
 
@@ -518,7 +518,7 @@ async def get_candles_in_range(
         start, end(required): datetime formatted as ISO8601 "YYYY-MM-DDTHH:mm:SS" or unix timestamp.
     '''
 
-    ccxt_exchange = _supported_exchanges[exchange.value]
+    ccxt_exchange = supported_exchanges[exchange.value]
     ccxt_exchange.load_markets()
     assert ccxt_exchange.currencies
     assert ccxt_exchange.markets
@@ -625,12 +625,13 @@ async def get_candles_at_dates(
     Dates should be provided in the body of the request as a json array of  dates formatted as ISO8601 "YYYY-MM-DDTHH:mm:SS".
     '''
 
-    if exchange.value not in _supported_exchanges:
+    result: list[Candle] = []
+    if exchange.value not in supported_exchanges:
         raise HTTPException(
                 detail      = ServerErrors.EXCHANGE_NOT_SUPPORTED,
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
 
-    ccxt_exchange = _supported_exchanges[exchange.value]
+    ccxt_exchange = supported_exchanges[exchange.value]
     ccxt_exchange.load_markets()
 
     pair = get_supported_pair_for(currency, ccxt_exchange)
@@ -674,33 +675,52 @@ async def get_candles_at_dates(
 def tests():
     # Placeholder
     # Expected: validation errors or server errors or valid responses.
+    # TODO(nochiel) Make these robust.
 
-    import requests
-    response = requests.get('http://[::1]:5000/api/now/FOOBAR')
-    response = requests.get('http://[::1]:5000/api/now/usd')
-    response = requests.get('http://[::1]:5000/api/now/USD')
-    response = requests.get('http://[::1]:5000/api/now/JPY')
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
 
-    response = requests.get('http://[::1]:5000/api/now/USD/Bitstamp')
-    response = requests.get('http://[::1]:5000/api/now/USD/bitstamp')
-    response = requests.get('http://[::1]:5000/api/now/usdt/bitstamp')  
+    response = client.get('http://[::1]:5000/api/now/FOOBAR')
+    assert not response.status_code == 200
 
-    response = requests.get(
+    response = client.get('http://[::1]:5000/api/now/usd')
+    assert not response.status_code == 200
+
+    response = client.get('http://[::1]:5000/api/now/USD')
+    assert response.status_code == 200
+
+    response = client.get('http://[::1]:5000/api/now/JPY')
+    assert response.status_code == 200
+
+    response = client.get('http://[::1]:5000/api/now/USD/Bitstamp')
+    assert not response.status_code == 200
+
+    response = client.get('http://[::1]:5000/api/now/USD/bitstamp')
+    assert response.status_code == 200
+
+    response = client.get('http://[::1]:5000/api/now/usdt/bitstamp')  
+    assert not response.status_code == 200
+
+    response = client.get(
             'http://[::1]:5000/api/history/USD/bitstamp?start=2019-01-01T0000&end=1522641600'
             )
+    assert response.status_code == 200
 
-    response = requests.get(
+    response = client.get(
             "http://[::1]:5000/api/history/USD/liquid?start=2022-01-01T00:00&end=2022-02-01T00:00"
             )
+    assert response.status_code == 200
 
-    response = requests.post('http://[::1]:5000/history/USDT/binance',
+    response = client.post('http://[::1]:5000/history/USDT/binance',
             json = ['2022-01-01T00:00', '2022-02-01T00:00', '2021-12-01T00:00']
             )
+    assert response.status_code == 200
 
-    response = requests.post(
+    response = client.post(
             "http://[::1]:5000/api/history/JPY/liquid",
             json=["2022-01-01T00:00", "2022-02-01T00:00", "2021-12-01T00:00"],
             )
+    assert response.status_code == 200
 
 if __name__ == '__main__':
     import uvicorn
@@ -711,6 +731,8 @@ if __name__ == '__main__':
     uvicorn.run('app:app', 
             host ='::', 
             port = 5000, 
-            debug = True,
+            debug = _settings.debug,
             log_level = 'debug', 
-            reload = True)
+            reload = True,
+            reload_includes = ['spotbit.config']  # FIXME(nochiel) Does nothing?
+            )
