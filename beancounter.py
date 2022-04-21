@@ -32,29 +32,20 @@ import app as spotbit
 
 import bdkpython as bdk
 
-# Ref. https://github.com/tiangolo/fastapi/issues/1508
-import logging
-logger = logging.getLogger(__name__)
+logger = spotbit.logger
 assert logger
-logger.setLevel(logging.DEBUG)
-
-handler = logging.StreamHandler()
-
-formatter = logging.Formatter(
-    '[%(asctime)s] %(levelname)s (thread %(thread)d):\t%(module)s.%(funcName)s: %(message)s')
-
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 logger.debug('starting')
 logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
 
 Descriptor = str
 def get_new_wallet_descriptor() -> tuple[bdk.Wallet, Descriptor]:
+
+    return NotImplemented
+
     key = bdk.generate_extended_key(network = bdk.Network.TESTNET, 
             word_count = bdk.WordCount.WORDS12,
             password = None)
 
-    return NotImplemented
 
     print(f'key.mnemonic: {key.mnemonic}')
     print(f'key.xprv: {key.xprv}')
@@ -157,7 +148,8 @@ class TransactionDetails():
 TransactionDetailsForAddresses = dict[Address, list[TransactionDetails]] 
 async def make_transaction_details(
         addresses, 
-        transactions: list[Transactions]
+        transactions: list[Transactions],
+        server = spotbit.app,
         ) -> TransactionDetailsForAddresses:
 
     assert addresses
@@ -167,39 +159,59 @@ async def make_transaction_details(
 
     result = {address: [] for address in addresses}
 
-    server = app.app
     # server.config.update({'TESTING': True})
 
-    def get_transaction_details_for(address: str, transactions: Transactions, server = server) -> TransactionDetailsForAddresses:
+    async def get_transaction_details_for(address: str, transactions: Transactions, server = server) -> TransactionDetailsForAddresses:
 
         logger.debug('')
         assert address
         assert transactions 
-        assert len(transactions)
 
         result = {address: []}
         
         timestamps_to_get = [datetime.fromtimestamp(transaction['status']['block_time'])
                 for transaction in transactions]
-        timestamps_to_get = [timestamp.isoformat() for timestamp in timestamps_to_get]
     
         assert len(timestamps_to_get)
-        client = server.test_client()
-        response = client.post('/history/USD/bitstamp', 
-                json   = timestamps_to_get)    
 
+        from fastapi.testclient import TestClient
+        client = TestClient(server)
+
+        assert spotbit.supported_exchanges
         candles = []
-        if response.status_code < 400: 
-            data = response.json
-            logger.debug(f'data: {data}')
-            if data:
-                candles = [app.Candle(**candle) for candle in data]
-                logger.debug(f'candles: {candles}')
-        else:         # FIXME Handle HTTPStatus response errors.
-            logger.error(f'{response.status}: {response.data}')
+        for exchange in spotbit.supported_exchanges:
 
-        if len(candles):
-            assert len(candles) == len(transactions), f'len(candles): {len(candles)}\t len(transactions): {len(transactions)}'
+            candles = await spotbit.get_candles_at_dates(
+                    currency = spotbit.CurrencyName.USD,
+                    exchange = spotbit.ExchangeName.BITSTAMP,
+                    dates = timestamps_to_get)
+
+            if candles:
+                if len(candles) == len(transactions): break
+
+            '''
+            response = client.post(f'/history/USD/{exchange}', 
+                    json   = timestamps_to_get)    
+
+            if response.ok:
+
+                data = response.json()
+                logger.debug(f'data: {data}')
+                if data:
+                    candles = [spotbit.Candle(**candle) for candle in data]
+                    logger.debug(f'candles: {candles}')
+
+                    if len(candles) < len(transactions): continue
+
+                    break
+            else:
+                logger.error(f'{response.status}: {response.data}')
+                continue
+            '''
+
+        if candles:
+            assert len(candles) == len(transactions), f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}'
+            logger.debug(f'candles: {candles}')
             for i in range(len(transactions)):
                 transaction = transactions[i]
                 inputs = transaction['vin']
@@ -224,10 +236,11 @@ async def make_transaction_details(
         transactions_for  = transactions[address_index]
         if len(transactions_for):
             address = addresses[address_index]
-            tasks.append(asyncio.to_thread(get_transaction_details_for, 
-                address = address, transactions = transactions_for))
+            # FIXME(nochiel) Make these multithreaded.
+            tasks.append(asyncio.create_task(get_transaction_details_for( 
+                address = address, transactions = transactions_for)))
 
-    if len(tasks):
+    if tasks:
         _transaction_details = await asyncio.gather(*tasks)
         transaction_details = {address: detail 
                 for details_for in _transaction_details
@@ -487,11 +500,11 @@ if __name__ == '__main__':
     # FINDOUT How do I ensure bdk does this automatically? 
     # FINDOUT How does Electrum get all the relevant descriptors when given an xpub? Depth search?
 
-    # descriptor = descriptors['test']['pubkey']  
+    descriptor = descriptors['test']['pubkey']  
 
-    import blockchaincommons as bc
-    descriptor = bc.descriptors['BlockchainCommons']['pubkey']  
+    # import blockchaincommons as bc
+    # descriptor = bc.descriptors['BlockchainCommons']['pubkey']  
 
     logger.debug(f'testing using descriptor: {descriptor}')
-    # asyncio.run(make_beancount_file_for(descriptor,))
-    asyncio.run(make_beancount_file_for(descriptor, network = bdk.Network.BITCOIN))  
+    asyncio.run(make_beancount_file_for(descriptor,))
+    # asyncio.run(make_beancount_file_for(descriptor, network = bdk.Network.BITCOIN))  
