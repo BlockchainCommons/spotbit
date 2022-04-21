@@ -128,6 +128,24 @@ class Candle(BaseModel):
                 datetime: lambda v: v.isoformat()
                 }
 
+def get_supported_pair_for(currency: CurrencyName, exchange: ccxt.Exchange) -> str:
+    assert exchange
+
+    result = ''
+
+    exchange.load_markets()
+    market_ids = {f'BTC{currency.value}', f'XBT{currency.value}', f'BTC{currency.value}'.lower(), f'XBT{currency.value}'.lower()}
+    market_ids_found = list((market_ids & exchange.markets_by_id.keys()))
+    if market_ids_found:
+        market_id = market_ids_found[0]
+        market = exchange.markets_by_id[market_id]
+        if market:
+            result = market['symbol']
+            logger.debug(f'Found market {market}, with symbol {result}')
+
+    return result
+
+
 # FIXME(nochiel) Redundancy: Merge this with get_history.
 # TODO(nochiel) TEST Do we really need to check if fetchOHLCV exists in the exchange api? 
 # TEST ccxt abstracts internally using fetch_trades so we don't have to use fetch_ticker ourselves.
@@ -138,14 +156,14 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
     assert exchange and isinstance(exchange, ccxt.Exchange)
     assert currency
 
+    exchange.load_markets()
+    pair = get_supported_pair_for(currency, exchange)
+    if not pair: return None
+
     result = None
     latest_candle = None
-    ticker = f'BTC/{currency.value}'
     dt = None
 
-    exchange.load_markets()
-    if ticker not in exchange.markets:
-        return None
 
     if exchange.has['fetchOHLCV']:
         logger.debug('fetchOHLCV')
@@ -185,7 +203,7 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
 
         try:
             candles = exchange.fetchOHLCV(
-                    symbol      = ticker, 
+                    symbol      = pair, 
                     timeframe   = timeframe, 
                     limit       = limit, 
                     since       = since, 
@@ -197,11 +215,11 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
             logger.error(f'error requesting candle from {exchange.name}: {e}')
 
     else:       # TODO(nochiel) TEST 
-        logger.debug(f'fetch_ticker: {ticker}')
+        logger.debug(f'fetch_ticker: {pair}')
 
         candle = None
         try:
-            candle = exchange.fetch_ticker(ticker)
+            candle = exchange.fetch_ticker(pair)
         except Exception as e:
             logger.error(f'error on {exchange} fetch_ticker: {e}')
 
@@ -268,14 +286,6 @@ def calculate_average_price(candles: list[Candle]) -> Candle:
             )
     return candle
 
-# TODO(nochiel) Verify: Do we need this? Will it be correct in all cases?
-def get_supported_currencies(exchange: ccxt.Exchange) -> list[str] :
-
-    required = set(_settings.currencies)
-    given    = set(exchange.currencies.keys())
-
-    return list(required & given)
-
 class ExchangeDetails(BaseModel):
     id: str
     name: str
@@ -289,6 +299,13 @@ async def get_exchanges():
     '''
     Get a list of exchanges that this instance of Spotbit has been configured to use.
     '''
+
+    def get_supported_currencies(exchange: ccxt.Exchange) -> list[str] :
+
+        required = set(_settings.currencies)
+        given    = set(exchange.currencies.keys())
+
+        return list(required & given)
 
     result: list[ExchangeDetails] = []
 
@@ -507,10 +524,8 @@ async def get_candles_in_range(
     assert ccxt_exchange.currencies
     assert ccxt_exchange.markets
 
-    pair = f'BTC/{currency.value}' 
-    if ccxt_exchange.id == 'bitmex':
-        pair = f'BTC/{currency}:{currency}'
-    if pair not in ccxt_exchange.markets:
+    pair = get_supported_pair_for(currency, ccxt_exchange)
+    if not pair:
         raise HTTPException(
                 detail = f'Spotbit does not support the {pair} pair on {ccxt_exchange}',
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
@@ -600,12 +615,13 @@ async def get_candles_in_range(
     return result
 
 
+# TODO(nochiel) If no exchange is given, test all supported exchanges until we get candles for all dates.
 # Return all database rows within `tolerance` for each of the supplied dates
 @app.post('/api/history/{currency}/{exchange}')
 async def get_candles_at_dates(
         currency: CurrencyName, 
         exchange: ExchangeName,
-        dates:    list[datetime]):
+        dates:    list[datetime]) -> list[Candle]:
     '''
     Dates should be provided in the body of the request as a json array of  dates formatted as ISO8601 "YYYY-MM-DDTHH:mm:SS".
     '''
@@ -618,12 +634,16 @@ async def get_candles_at_dates(
     ccxt_exchange = _supported_exchanges[exchange.value]
     ccxt_exchange.load_markets()
 
-    pair = f'BTC/{currency.value}' 
-    if pair not in ccxt_exchange.markets:
+    pair = get_supported_pair_for(currency, ccxt_exchange)
+            
+    # Different exchanges have different ticker formates
+    if not pair:   
         raise HTTPException(
-                detail = f'Spotbit does not support the {pair} pair on {exchange.value}',
+                detail = f'Spotbit does not support the BTC/{currency.value} pair on {exchange.value}',
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
 
+    # FIXME(nochiel) Different exchanges return candle data at different resolutions.
+    # I need to get candle data in the lowest possible resolution then filter out the dates needed.
     limit = 100
     timeframe = '1h'
 
@@ -634,7 +654,7 @@ async def get_candles_at_dates(
         elif '30m' in ccxt_exchange.timeframes:
             timeframe = '30m'
 
-    candles = {}
+    candles_found: tuple[list[Candle] | None] 
     args = [dict(exchange = ccxt_exchange, 
             limit = limit,
             timeframe = timeframe,
@@ -644,9 +664,11 @@ async def get_candles_at_dates(
             for date in dates]
     tasks = [asyncio.to_thread(get_history, **arg) 
             for arg in args]
-    candles = await asyncio.gather(*tasks)
+    candles_found = await asyncio.gather(*tasks)
 
-    result = candles
+    candles = []
+    if candles_found: 
+        result = [candles_at[0] for candles_at in candles_found if candles_at]
 
     return result
 
