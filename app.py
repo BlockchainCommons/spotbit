@@ -446,17 +446,16 @@ def get_history(*,
 
     result = None
 
-    rateLimit = exchange.rateLimit 
-    _since = int(since.timestamp() * 1e3)
+    _since = round(since.timestamp() * 1e3)
 
     params = {}
     if exchange == "bitfinex":
-        params = { 'end' : round(end.timestamp() * 1e3) }
+        params = {'end' : round(end.timestamp() * 1e3)}
 
     candles = None
     try:
-        wait = 1
-        while wait > 0:
+        wait = exchange.rateLimit * 1e-3
+        while wait:
             try:
                 candles = exchange.fetchOHLCV(
                         symbol      = pair, 
@@ -468,7 +467,7 @@ def get_history(*,
                 wait = 0
 
             except ccxt.errors.RateLimitExceeded as e:
-                logger.debug(f'{e}. Rate limit for {exchange} is {rateLimit}')
+                logger.debug(f'{e}. Rate limit for {exchange} is {exchange.rateLimit}')
                 time.sleep(wait)
                 wait *= 2
 
