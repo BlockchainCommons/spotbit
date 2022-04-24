@@ -1,4 +1,5 @@
 # Ref. https://beancount.github.io/docs/the_double_entry_counting_method.html
+# Ref.https://beancount.github.io/docs/trading_with_beancount.html
 # Given a descriptor, generate a beancount file for accounting purposes.
 # For each address check what inputs it has received. Put these under income/debits.
 # For each address check what outputs it has paid. Put these under expenses/credits.
@@ -11,7 +12,7 @@
 # https://github.com/bitcoin/bitcoin/pull/17975
 
 _ESPLORA_API = 'https://blockstream.info/testnet/api/'
-_GAP_SIZE = 1000    # Make this configurable (set via command line)
+_GAP_SIZE = 1_000    # Make this configurable (set via command line)
 
 
 import asyncio
@@ -227,7 +228,7 @@ async def make_transaction_details(
                         timestamp = timestamp,
                         hash = transaction['txid'],
                         is_input = is_input,
-                        twap = mean([candle.open, candle.high, candle.low, candle.close])))
+                        twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2)))
 
         return result
 
@@ -251,11 +252,10 @@ async def make_transaction_details(
 
     return result
 
-
 def make_records(transaction_details: TransactionDetailsForAddresses, 
         addresses: list[Address], 
         transactions: list[Transactions]
-        ) -> str | None:
+        ) -> str:
     # FIXME I can't use the beancount api to create a data structure that I can then dump to a beancount file.
     # Instead I must emit strings then load the strings to test for correctness.
 
@@ -270,42 +270,92 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
     type = 'Assets'
     country = ''
     institution = ''
-    account_name = 'BTC'
+    btc_account_name = 'BTC'
+    usd_account_name = 'USD'    # TODO(nochiel) The users sets the currency.
     subaccount_name = ''
 
     from beancount.core import account
 
-    components = [type.title(), country.title(), institution.title(), account_name, subaccount_name]
+    components = [type.title(), country.title(), institution.title(), btc_account_name, subaccount_name]
     components = [c for c in components if c != '']
-    account_name = account.join(*components)
-    assert account.is_valid(account_name), f'Account name is not valid. Got: {account_name}'
+    btc_account = account.join(*components)
+    assert account.is_valid(btc_account), f'Account name is not valid. Got: {btc_account}'
+
+    # Test: Treat cash as a liability.
+    # TODO(nochiel) Store the exchange rate at each transaction date.
+    components = ['liabilities'.title(), 'Cash', usd_account_name, subaccount_name]
+    components = [c for c in components if c != '']
+    fiat_account = account.join(*components)
+    assert account.is_valid(fiat_account), f'Account name is not valid. Got: {fiat_account}'
 
     # Loop through on-chain transactions and create transactions and relevant postings for each transaction.
     assert(transaction_details)
+
+    def get_earliest_blocktime(transactions: list[Transactions] = transactions) -> datetime:
+        assert transactions
+
+        result = datetime.now()
+        if transactions[0]:
+            result = datetime.fromtimestamp(transactions[0][0]['status']['block_time'])
+
+        for transactions_for in transactions:
+            if transactions_for:
+                for transaction in transactions_for:
+                    timestamp = datetime.fromtimestamp(transaction['status']['block_time'])
+                    result = timestamp if timestamp < result else result
+
+        return result
+
+    date_of_account_open = get_earliest_blocktime().date()
+
+    # Commodity directive
+    '''
+    1867-07-01 commodity CAD
+      name: "Canadian Dollar"
+      asset-class: "cash"
+    '''
+    btc_commodity_directive = (
+'''
+2008-10-31 commodity BTC
+  name: "Bitcoin"
+  asset-class: "cryptocurrency"
+'''
+)
+
+    # Account directive
+    # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
+    account_directives = [
+            f'{date_of_account_open} open {btc_account}\tBTC',
+            f'{date_of_account_open} open {fiat_account}\tUSD',
+            ]
 
     transactions_by_hash = {tx['txid'] : tx 
             for for_address in transactions
             for tx in for_address}
 
     transaction_details_by_hash = {detail.hash : detail
-            for _, details_for in transaction_details.items()
+            for details_for in transaction_details.values()
             for detail in details_for}
 
-    def get_earliest_blocktime(transactions: list[Transactions] = transactions) -> datetime:
-        assert transactions
-        assert len(transactions[0])
+    n_inputs = 0
+    for d in transaction_details_by_hash.values():
+        if d.is_input: n_inputs += 1 
 
-        result = datetime.fromtimestamp(transactions[0][0]['status']['block_time'])
-        for transactions_for in transactions:
-            for transaction in transactions_for:
-                timestamp = datetime.fromtimestamp(transaction['status']['block_time'])
-                result = timestamp if timestamp < result else result
+    logger.debug(f'Number of input txs: {n_inputs}')
+    logger.debug(f'Number of all txs: {len(transaction_details_by_hash.values())}')
 
-        return result
+    '''
+    receiving_transaction_details_by_hash = {}
 
-    date_of_account_open = get_earliest_blocktime().date()
-    # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
-    account_directive = f'{date_of_account_open} open {account_name}    BTC'
+    for address, details_for in transaction_details.items():
+        for detail in details_for:
+            if not detail.is_input:
+                receiving_transaction_details_by_address[address].extend(transaction_details[address])
+    '''
+
+    # TODO(nochiel) Order transactions by date. For each date record a btc price.
+    # e.g. 2015-04-30 price AAPL 125.15 USD
+    btc_price_directive = ''
 
 
     # Transactions and entries. e.g.
@@ -327,7 +377,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
         def __init__(self, address: str, amount: int):
             self.address = address
             self.amount = amount    # satoshis
-    
+
     def get_payees(
             transaction_hash: str,
             addresses = addresses,
@@ -364,49 +414,78 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
         return result
 
     assert transaction_details
-    transaction_directives = []
     # logger.debug(f'transaction_details: {transaction_details}')
 
-    for address, details in transaction_details.items():
+    transaction_directives = []
+    # TODO(nochiel) Post income transactions first so that we never post a net-negative amount of btc. that is, the funding transaction should appear first.
+    receiving_transactions = {txid : detail 
+            for txid, detail in transaction_details_by_hash.items()
+            if not detail.is_input}
+    sending_transactions = {txid : detail 
+            for txid, detail in transaction_details_by_hash.items()
+            if txid not in receiving_transactions}
+    for transactions_details_ in [receiving_transactions, sending_transactions]:
+        for detail in transactions_details_.values():
 
         # Create a beancount transaction for each transaction.
         # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
-        for transaction in details:
 
+            ''' E.g. 
+            2014-07-11 * "Sold shares of S&P 500"
+              Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
+              Assets:ETrade:Cash          1979.90 USD
+              Income:ETrade:CapitalGains
+            '''
             meta = '' 
-            date = transaction.timestamp
+            date = detail.timestamp.date()
             flag = '*'
 
-            payees = get_payees(transaction_hash = transaction.hash)
+            payees = get_payees(transaction_hash = detail.hash)
 
             tags = [] 
             links = []
 
-            transaction_directive = f'{date} * {"Paying" if transaction.is_input else "Receiving"}'
-            narration = 'Paying' if transaction.is_input else 'Receiving from' 
-
+            # Should a payee posting use the output address as a subaccount?
+            # Each payee is a transaction
+            # If not is_input put our receiving transactions first.
             payee_transaction_directives = []
             for payee in payees:
-                # FIXME Show amounts in BTC and USD.
-                payee_transaction_directive = f'{account_name} {"-" if transaction.is_input else ""}{transaction.twap} USD\t; {narration} {payee.address}' 
+                transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
+                btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{round(payee.amount * 1e-8, 8)} BTC' 
+
+                # TODO(nochiel)  Ref. https://beancount.github.io/docs/how_inventories_work.html#price-vs-cost-basis
+                transaction_fiat_amount = round(detail.twap * payee.amount * 1e-8, 2)
+                if not detail.is_input:
+                    btc_payee_transaction_directive += f' {{{detail.twap} USD}}' 
+                if detail.is_input: 
+                    btc_payee_transaction_directive += f' @ {detail.twap} USD\t' 
+                fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
+                        + f'{transaction_fiat_amount} USD\t')
+
+                payee_transaction_directive = btc_payee_transaction_directive
+                payee_transaction_directive += '\n'
+                payee_transaction_directive += fiat_payee_transaction_directive
                 payee_transaction_directives.append(payee_transaction_directive)
 
-            transaction_directive += '\n'
-            for directive in payee_transaction_directives:
-                transaction_directive += directive
                 transaction_directive += '\n'
-
-            transaction_directives.append(transaction_directive)
+                transaction_directive += str.join('\n', payee_transaction_directives)
+                transaction_directive += '\n'
+                transaction_directives.append(transaction_directive)
 
     document = ''
-    document += account_directive
+    document = btc_commodity_directive
     document += '\n'
-
-    logger.debug(f'Number of transaction_directives: {len(transaction_directives)}')
-    if len(transaction_directives):
-        document += str.join('\n', transaction_directives)
+    document += str.join('\n', account_directives)
+    document += '\n\n'
+    document += str.join('\n', transaction_directives)
 
     # TODO Validate document
+    from beancount import loader
+    _, errors, _ = loader.load_string(document)
+    if errors:
+        logger.error(f'---{len(errors)} Errors in the generated beancount file---')
+        for error in errors:
+            logger.error(error)
 
     return document
 
@@ -458,6 +537,13 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
     if not transaction_details:
         raise Exception('no transaction details')
 
+    '''
+    for i in range(50):
+        address = addresses[i]
+        txs_for = transactions[i]
+        logger.debug([tx['status']['block_height'] for tx in txs_for])
+    '''
+
     # logger.debug(f'transaction_details: {transaction_details}')
 
     logger.debug('Making beancount file.')
@@ -501,10 +587,10 @@ if __name__ == '__main__':
     # FINDOUT How does Electrum get all the relevant descriptors when given an xpub? Depth search?
 
     descriptor = descriptors['test']['pubkey']  
-
-    # import blockchaincommons as bc
-    # descriptor = bc.descriptors['BlockchainCommons']['pubkey']  
-
     logger.debug(f'testing using descriptor: {descriptor}')
     asyncio.run(make_beancount_file_for(descriptor,))
+
+    import blockchaincommons as bc
+    # descriptor = bc.descriptors['BlockchainCommons']['test']  
+    # logger.debug(f'testing using descriptor: {descriptor}')
     # asyncio.run(make_beancount_file_for(descriptor, network = bdk.Network.BITCOIN))  
