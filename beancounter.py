@@ -12,7 +12,7 @@
 # https://github.com/bitcoin/bitcoin/pull/17975
 
 _ESPLORA_API = 'https://blockstream.info/testnet/api/'
-_GAP_SIZE = 1_000    # Make this configurable (set via command line)
+_GAP_SIZE = 1_024    # Make this configurable (set via command line)
 
 
 import asyncio
@@ -39,24 +39,9 @@ logger.debug('starting')
 logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
 
 Descriptor = str
-def get_new_wallet_descriptor() -> tuple[bdk.Wallet, Descriptor]:
-
-    return NotImplemented
-
-    key = bdk.generate_extended_key(network = bdk.Network.TESTNET, 
-            word_count = bdk.WordCount.WORDS12,
-            password = None)
-
-
-    print(f'key.mnemonic: {key.mnemonic}')
-    print(f'key.xprv: {key.xprv}')
-    print(f'key.fingerprint: {key.fingerprint}')
-
-    # FINDOUT how to get a descriptor from a key.
-    assert descriptor
-
 Address = str
 Transactions = list[dict]
+
 async def get_transactions(addresses: list[Address]) -> list[Transactions]:
 
     result = None
@@ -151,24 +136,23 @@ async def make_transaction_details(
         addresses, 
         transactions: list[Transactions],
         server = spotbit.app,
-        ) -> TransactionDetailsForAddresses:
+        ) -> tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses]:
 
     assert addresses
     assert transactions
 
     from statistics import mean
 
-    result = {address: [] for address in addresses}
+    receiving_transaction_details = {address: [] for address in addresses}
+    sending_transaction_details = {address: [] for address in addresses}
 
-    # server.config.update({'TESTING': True})
+    async def get_transaction_details_for(address: str, transactions: Transactions, server = server) -> tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses]:
 
-    async def get_transaction_details_for(address: str, transactions: Transactions, server = server) -> TransactionDetailsForAddresses:
-
-        logger.debug('')
         assert address
         assert transactions 
 
-        result = {address: []}
+        receiving = {address: []}
+        sending   = {address: []}
         
         timestamps_to_get = [datetime.fromtimestamp(transaction['status']['block_time'])
                 for transaction in transactions]
@@ -224,13 +208,18 @@ async def make_transaction_details(
 
                 timestamp = datetime.fromtimestamp(transaction['status']['block_time'])
                 candle    = candles[i]
-                result[address].append(TransactionDetails(
+
+                detail = TransactionDetails(
                         timestamp = timestamp,
                         hash = transaction['txid'],
                         is_input = is_input,
-                        twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2)))
+                        twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2))
+                if is_input: 
+                    sending[address].append(detail)
+                else:
+                    receiving[address].append(detail)
 
-        return result
+        return receiving, sending
 
     tasks = []
     for address_index in range(len(transactions)):
@@ -241,21 +230,29 @@ async def make_transaction_details(
             tasks.append(asyncio.create_task(get_transaction_details_for( 
                 address = address, transactions = transactions_for)))
 
+
     if tasks:
-        _transaction_details = await asyncio.gather(*tasks)
-        transaction_details = {address: detail 
-                for details_for in _transaction_details
-                for address, detail in details_for.items()}
-        for address in addresses:
-            details = transaction_details[address]
-            result[address].extend(details)
+        transaction_details = await asyncio.gather(*tasks)
 
-    return result
+        for details_for in [details_for[0] for details_for in transaction_details]:
+            for address, details in details_for.items():
+                receiving_transaction_details[address].extend(details)
 
-def make_records(transaction_details: TransactionDetailsForAddresses, 
+        for details_for in [details_for[1] for details_for in transaction_details]:
+            for address, details in details_for.items():
+                sending_transaction_details[address].extend(details)
+
+    return receiving_transaction_details, sending_transaction_details
+
+def make_records(transaction_details: tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses], 
         addresses: list[Address], 
         transactions: list[Transactions]
         ) -> str:
+
+    assert transaction_details
+    assert addresses
+    assert transactions
+
     # FIXME I can't use the beancount api to create a data structure that I can then dump to a beancount file.
     # Instead I must emit strings then load the strings to test for correctness.
 
@@ -289,7 +286,6 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
     assert account.is_valid(fiat_account), f'Account name is not valid. Got: {fiat_account}'
 
     # Loop through on-chain transactions and create transactions and relevant postings for each transaction.
-    assert(transaction_details)
 
     def get_earliest_blocktime(transactions: list[Transactions] = transactions) -> datetime:
         assert transactions
@@ -333,6 +329,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
             for for_address in transactions
             for tx in for_address}
 
+    '''
     transaction_details_by_hash = {detail.hash : detail
             for details_for in transaction_details.values()
             for detail in details_for}
@@ -343,6 +340,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
 
     logger.debug(f'Number of input txs: {n_inputs}')
     logger.debug(f'Number of all txs: {len(transaction_details_by_hash.values())}')
+    '''
 
     '''
     receiving_transaction_details_by_hash = {}
@@ -378,99 +376,72 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
             self.address = address
             self.amount = amount    # satoshis
 
+    Transaction = dict
     def get_payees(
-            transaction_hash: str,
-            addresses = addresses,
-            transactions = transactions_by_hash,
-            transaction_details_by_hash = transaction_details_by_hash,
+            transaction: Transaction,
            ) -> list[Payee]:
 
-        assert addresses
-        assert transactions
-        assert transaction_details_by_hash
+        assert Transaction
 
         result = []
 
-        tx = transactions[transaction_hash]
-        detail = transaction_details_by_hash[transaction_hash]
-        assert tx
-        assert detail
-
-        payees = None
-        outputs = tx['vout']
+        outputs = transaction['vout']
         result = [Payee(address = output['scriptpubkey_address'], amount = output['value']) 
                 for output in outputs]
-        if detail.is_input:
-            # If user's address was an input, then remove output addresses that belong to user's wallet?
-            payees = filter(lambda payee: payee.address not in addresses, 
-                    list(result))
-        else:
-            # If user's utxo was not an input, then remove output addresses that don't belong to the user's wallet.
-            # FIXME
-            payees = filter(lambda payee: payee.address in addresses, 
-                    result)
 
-        result = list(payees) if payees else result
         return result
 
     assert transaction_details
     # logger.debug(f'transaction_details: {transaction_details}')
 
     transaction_directives = []
-    # TODO(nochiel) Post income transactions first so that we never post a net-negative amount of btc. that is, the funding transaction should appear first.
-    receiving_transactions = {txid : detail 
-            for txid, detail in transaction_details_by_hash.items()
-            if not detail.is_input}
-    sending_transactions = {txid : detail 
-            for txid, detail in transaction_details_by_hash.items()
-            if txid not in receiving_transactions}
-    for transactions_details_ in [receiving_transactions, sending_transactions]:
-        for detail in transactions_details_.values():
+    # Post income transactions first so that we never post a net-negative amount of btc. that is, the funding transaction should appear first.
+    for details_for in transaction_details:
+        for address, details in details_for.items():
+            for detail in details:
 
-        # Create a beancount transaction for each transaction.
-        # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
+            # Create a beancount transaction for each transaction.
+            # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
 
-            ''' E.g. 
-            2014-07-11 * "Sold shares of S&P 500"
-              Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
-              Assets:ETrade:Cash          1979.90 USD
-              Income:ETrade:CapitalGains
-            '''
-            meta = '' 
-            date = detail.timestamp.date()
-            flag = '*'
+                ''' E.g. 
+                2014-07-11 * "Sold shares of S&P 500"
+                  Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
+                  Assets:ETrade:Cash          1979.90 USD
+                  Income:ETrade:CapitalGains
+                '''
+                meta = '' 
+                date = detail.timestamp.date()
+                flag = '*'
+                payees = get_payees(transactions_by_hash[detail.hash])
+                tags = [] 
+                links = []
 
-            payees = get_payees(transaction_hash = detail.hash)
+                # Should a payee posting use the output address as a subaccount?
+                # Each payee is a transaction
+                # If not is_input put our receiving transactions first.
+                payee_transaction_directives = []
+                for payee in payees:
+                    transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
+                    btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{round(payee.amount * 1e-8, 8)} BTC' 
 
-            tags = [] 
-            links = []
+                    # TODO(nochiel)  Ref. https://beancount.github.io/docs/how_inventories_work.html#price-vs-cost-basis
+                    transaction_fiat_amount = round(detail.twap * payee.amount * 1e-8, 2)
+                    if not detail.is_input:
+                        btc_payee_transaction_directive += f' {{{detail.twap} USD}}' 
+                    if detail.is_input: 
+                        btc_payee_transaction_directive += f' @ {detail.twap} USD\t' 
+                    fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
+                            + f'{transaction_fiat_amount} USD\t')
 
-            # Should a payee posting use the output address as a subaccount?
-            # Each payee is a transaction
-            # If not is_input put our receiving transactions first.
-            payee_transaction_directives = []
-            for payee in payees:
-                transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
-                btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{round(payee.amount * 1e-8, 8)} BTC' 
+                    payee_transaction_directive = btc_payee_transaction_directive
+                    payee_transaction_directive += '\n'
+                    payee_transaction_directive += fiat_payee_transaction_directive
+                    payee_transaction_directives.append(payee_transaction_directive)
 
-                # TODO(nochiel)  Ref. https://beancount.github.io/docs/how_inventories_work.html#price-vs-cost-basis
-                transaction_fiat_amount = round(detail.twap * payee.amount * 1e-8, 2)
-                if not detail.is_input:
-                    btc_payee_transaction_directive += f' {{{detail.twap} USD}}' 
-                if detail.is_input: 
-                    btc_payee_transaction_directive += f' @ {detail.twap} USD\t' 
-                fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                        + f'{transaction_fiat_amount} USD\t')
-
-                payee_transaction_directive = btc_payee_transaction_directive
-                payee_transaction_directive += '\n'
-                payee_transaction_directive += fiat_payee_transaction_directive
-                payee_transaction_directives.append(payee_transaction_directive)
-
-                transaction_directive += '\n'
-                transaction_directive += str.join('\n', payee_transaction_directives)
-                transaction_directive += '\n'
-                transaction_directives.append(transaction_directive)
+                    transaction_directive += '\n'
+                    transaction_directive += str.join('\n', payee_transaction_directives)
+                    transaction_directive += '\n'
+                    transaction_directives.append(transaction_directive)
 
     document = ''
     document = btc_commodity_directive
@@ -532,7 +503,7 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
 
     logger.debug('Making transaction details.')
     transaction_details = await make_transaction_details(addresses = addresses, transactions = transactions)
-    logger.debug(f'Number of transactions_details: {sum([len(t) for t in transaction_details])}')
+    # logger.debug(transaction_details)
 
     if not transaction_details:
         raise Exception('no transaction details')
