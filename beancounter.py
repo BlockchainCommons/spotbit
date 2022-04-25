@@ -11,10 +11,6 @@
 # https://github.com/petertodd/python-bitcoinlib/issues/235
 # https://github.com/bitcoin/bitcoin/pull/17975
 
-_ESPLORA_API = 'https://blockstream.info/testnet/api/'
-_GAP_SIZE = 1_024    # Make this configurable (set via command line)
-
-
 import asyncio
 from datetime import datetime
 import time
@@ -22,7 +18,7 @@ import time
 from pydantic import BaseModel
 import requests
 
-import app as spotbit
+import server as spotbit
 
 # bdk seems limited. Things I want to be able to do:
 # - generate a descriptor from an extended key.
@@ -33,10 +29,10 @@ import app as spotbit
 
 import bdkpython as bdk
 
-logger = spotbit.logger
-assert logger
-logger.debug('starting')
-logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
+logger = None
+
+_ESPLORA_API = 'https://blockstream.info/testnet/api/'
+_GAP_SIZE = 50    # Make this configurable (set via command line)
 
 Descriptor = str
 Address = str
@@ -413,6 +409,10 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
                 date = detail.timestamp.date()
                 flag = '*'
                 payees = get_payees(transactions_by_hash[detail.hash])
+                if not detail.is_input:
+                    payees_in_descriptor = filter(lambda payee: payee.address in addresses, payees)
+                    payees = list(payees_in_descriptor)
+
                 tags = [] 
                 links = []
 
@@ -422,6 +422,8 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
                 payee_transaction_directives = []
                 for payee in payees:
                     transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
+
+                    # TODO(nochiel) Format amounts correctly.
                     btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{round(payee.amount * 1e-8, 8)} BTC' 
 
                     # TODO(nochiel)  Ref. https://beancount.github.io/docs/how_inventories_work.html#price-vs-cost-basis
@@ -526,7 +528,16 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
         with open('spotbit.beancount', mode = 'w') as file:
             file.write(beancount_document)
 
-if __name__ == '__main__':
+def make_beancount_from_descriptor(descriptor: Descriptor):
+
+    # TODO(nochiel) Use descriptor
+
+    def init():
+        assert logger
+        logger.debug('starting')
+        logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
+
+    init()
 
     descriptors = {
             'bdk':"wpkh(tprv8ZgxMBicQKsPcx5nBGsR63Pe8KnRUqmbJNENAfGftF3yuXoMMoVJJcYeUw5eVkm9WBPjWYt6HMWYJNesB5HaNVBaFc1M6dRjWSYnmewUMYy/84h/1h/0h/0/*)",
