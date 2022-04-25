@@ -134,12 +134,21 @@ def get_supported_pair_for(currency: CurrencyName, exchange: ccxt.Exchange) -> s
     result = ''
 
     exchange.load_markets()
-    market_ids = {f'BTC{currency.value}', f'XBT{currency.value}', f'BTC{currency.value}'.lower(), f'XBT{currency.value}'.lower()}
-    market_ids_found = list((market_ids & exchange.markets_by_id.keys()))
+    market_ids = {
+            f'BTC{currency.value}', 
+            f'BTC/{currency.value}',
+            f'XBT{currency.value}', 
+            f'XBT/{currency.value}', 
+            f'BTC{currency.value}'.lower(), 
+            f'XBT{currency.value}'.lower()}
+    market_ids_found = list(market_ids & exchange.markets_by_id.keys())
+    if not market_ids_found:
+        market_ids_found = list(market_ids & set([market['symbol'] for market in exchange.markets_by_id.values()]))
     if market_ids_found:
+        logger.debug(f'market_ids_found: {market_ids_found}')
         market_id = market_ids_found[0]
-        market = exchange.markets_by_id[market_id]
-        if market:
+        market = exchange.markets_by_id[exchange.market_id(market_id)] 
+        if market:  
             result = market['symbol']
             logger.debug(f'Found market {market}, with symbol {result}')
 
