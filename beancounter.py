@@ -29,10 +29,11 @@ import server as spotbit
 
 import bdkpython as bdk
 
-logger = None
+import logging
+logger = logging.getLogger(__name__)
 
 _ESPLORA_API = 'https://blockstream.info/testnet/api/'
-_GAP_SIZE = 50    # Make this configurable (set via command line)
+_GAP_SIZE = 100    # Make this configurable (set via command line)
 
 Descriptor = str
 Address = str
@@ -132,23 +133,24 @@ async def make_transaction_details(
         addresses, 
         transactions: list[Transactions],
         server = spotbit.app,
-        ) -> tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses]:
+        ) -> TransactionDetailsForAddresses:
 
     assert addresses
     assert transactions
 
     from statistics import mean
 
-    receiving_transaction_details = {address: [] for address in addresses}
-    sending_transaction_details = {address: [] for address in addresses}
 
-    async def get_transaction_details_for(address: str, transactions: Transactions, server = server) -> tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses]:
+    result = {address: [] for address in addresses}
+
+    async def get_transaction_details_for(address: str, 
+            transactions: Transactions, 
+            server = server) -> TransactionDetailsForAddresses:
 
         assert address
         assert transactions 
 
-        receiving = {address: []}
-        sending   = {address: []}
+        result = {address: []}
         
         timestamps_to_get = [datetime.fromtimestamp(transaction['status']['block_time'])
                 for transaction in transactions]
@@ -210,12 +212,9 @@ async def make_transaction_details(
                         hash = transaction['txid'],
                         is_input = is_input,
                         twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2))
-                if is_input: 
-                    sending[address].append(detail)
-                else:
-                    receiving[address].append(detail)
+                result[address].append(detail)
 
-        return receiving, sending
+        return result
 
     tasks = []
     for address_index in range(len(transactions)):
@@ -230,17 +229,13 @@ async def make_transaction_details(
     if tasks:
         transaction_details = await asyncio.gather(*tasks)
 
-        for details_for in [details_for[0] for details_for in transaction_details]:
+        for details_for in transaction_details:
             for address, details in details_for.items():
-                receiving_transaction_details[address].extend(details)
+                result[address].extend(details)
 
-        for details_for in [details_for[1] for details_for in transaction_details]:
-            for address, details in details_for.items():
-                sending_transaction_details[address].extend(details)
+    return result
 
-    return receiving_transaction_details, sending_transaction_details
-
-def make_records(transaction_details: tuple[TransactionDetailsForAddresses, TransactionDetailsForAddresses], 
+def make_records(transaction_details: TransactionDetailsForAddresses, 
         addresses: list[Address], 
         transactions: list[Transactions]
         ) -> str:
@@ -307,12 +302,10 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
       asset-class: "cash"
     '''
     btc_commodity_directive = (
-'''
-2008-10-31 commodity BTC
-  name: "Bitcoin"
-  asset-class: "cryptocurrency"
-'''
-)
+            '2008-10-31 commodity BTC\n'
+            '  name: "Bitcoin"\n'
+            '  asset-class: "cryptocurrency"\n'
+            )
 
     # Account directive
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
@@ -336,15 +329,6 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
 
     logger.debug(f'Number of input txs: {n_inputs}')
     logger.debug(f'Number of all txs: {len(transaction_details_by_hash.values())}')
-    '''
-
-    '''
-    receiving_transaction_details_by_hash = {}
-
-    for address, details_for in transaction_details.items():
-        for detail in details_for:
-            if not detail.is_input:
-                receiving_transaction_details_by_address[address].extend(transaction_details[address])
     '''
 
     # TODO(nochiel) Order transactions by date. For each date record a btc price.
@@ -391,10 +375,13 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
     # logger.debug(f'transaction_details: {transaction_details}')
 
     transaction_directives = []
-    # Post income transactions first so that we never post a net-negative amount of btc. that is, the funding transaction should appear first.
-    for details_for in transaction_details:
-        for address, details in details_for.items():
-            for detail in details:
+    for address in addresses:
+
+        details = transaction_details[address]
+        # Post transactions in chronological order. Esplora gives us reverse-chronological order
+        details.reverse()   
+
+        for detail in details:
 
             # Create a beancount transaction for each transaction.
             # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
@@ -419,29 +406,25 @@ def make_records(transaction_details: tuple[TransactionDetailsForAddresses, Tran
                 # Should a payee posting use the output address as a subaccount?
                 # Each payee is a transaction
                 # If not is_input put our receiving transactions first.
-                payee_transaction_directives = []
                 for payee in payees:
                     transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
 
-                    # TODO(nochiel) Format amounts correctly.
-                    btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{round(payee.amount * 1e-8, 8)} BTC' 
+                    btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{payee.amount * 1e-8 : .8f} BTC' 
 
-                    # TODO(nochiel)  Ref. https://beancount.github.io/docs/how_inventories_work.html#price-vs-cost-basis
-                    transaction_fiat_amount = round(detail.twap * payee.amount * 1e-8, 2)
+                    transaction_fiat_amount = detail.twap * payee.amount * 1e-8
                     if not detail.is_input:
-                        btc_payee_transaction_directive += f' {{{detail.twap} USD}}' 
+                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} USD }}' 
                     if detail.is_input: 
-                        btc_payee_transaction_directive += f' @ {detail.twap} USD\t' 
+                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} USD\t' 
                     fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                            + f'{transaction_fiat_amount} USD\t')
+                            + f'{transaction_fiat_amount : .2f} USD\t')
 
                     payee_transaction_directive = btc_payee_transaction_directive
                     payee_transaction_directive += '\n'
                     payee_transaction_directive += fiat_payee_transaction_directive
-                    payee_transaction_directives.append(payee_transaction_directive)
 
                     transaction_directive += '\n'
-                    transaction_directive += str.join('\n', payee_transaction_directives)
+                    transaction_directive += payee_transaction_directive
                     transaction_directive += '\n'
                     transaction_directives.append(transaction_directive)
 
@@ -509,13 +492,6 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
 
     if not transaction_details:
         raise Exception('no transaction details')
-
-    '''
-    for i in range(50):
-        address = addresses[i]
-        txs_for = transactions[i]
-        logger.debug([tx['status']['block_height'] for tx in txs_for])
-    '''
 
     # logger.debug(f'transaction_details: {transaction_details}')
 
