@@ -52,7 +52,7 @@ def get_logger():
 
     import logging
     logger = logging.getLogger(__name__)
-    if _settings.debug: logger.setLevel(logging.DEBUG)      
+    if settings.debug: logger.setLevel(logging.DEBUG)      
 
     formatter = logging.Formatter(
         '[%(asctime)s] %(levelname)s (thread %(thread)d):\t%(module)s.%(funcName)s: %(message)s')
@@ -72,26 +72,26 @@ def get_logger():
 
     return logger
 
-_settings = Settings()
+settings = Settings()
 
 # TODO(nochiel) Move this to the settings class.
 from enum import Enum
-CurrencyName = Enum('CurrencyName', [(currency, currency) for currency in _settings.currencies])  
+CurrencyName = Enum('CurrencyName', [(currency, currency) for currency in settings.currencies])  
 
 logger = get_logger()
 assert logger
 
-app = FastAPI(debug = _settings.debug)
+app = FastAPI(debug = settings.debug)
 
-logger.debug(f'Using currencies: {_settings.currencies}')
-if not _settings.exchanges:
+logger.debug(f'Using currencies: {settings.currencies}')
+if not settings.exchanges:
     logger.info('using all exchanges.')
-    _settings.exchanges = list(ccxt.exchanges)
+    settings.exchanges = list(ccxt.exchanges)
 
-assert _settings.exchanges
+assert settings.exchanges
 
 logger.info('Initialising supported exchanges.')
-for e in _settings.exchanges:
+for e in settings.exchanges:
     if e in ccxt.exchanges and e not in _unsupported_exchanges:
         supported_exchanges[e] = ccxt.__dict__[e]() 
         try:
@@ -270,8 +270,8 @@ def status(): return "server is running"
 @app.get('/api/configure')
 def get_configuration():
     return {
-            'currencies': _settings.currencies,
-            'exchanges':  _settings.exchanges,
+            'currencies': settings.currencies,
+            'exchanges':  settings.exchanges,
             }
 
 def calculate_average_price(candles: list[Candle]) -> Candle:
@@ -311,7 +311,7 @@ async def get_exchanges():
 
     def get_supported_currencies(exchange: ccxt.Exchange) -> list[str] :
 
-        required = set(_settings.currencies)
+        required = set(settings.currencies)
         given    = set(exchange.currencies.keys())
 
         return list(required & given)
@@ -329,7 +329,7 @@ async def get_exchanges():
 
         currencies = []
         if exchange.currencies: 
-            currencies = [c for c in _settings.currencies 
+            currencies = [c for c in settings.currencies 
                     if c in exchange.currencies]
 
         details = ExchangeDetails(
@@ -474,31 +474,31 @@ def get_history(*,
 
     _since = round(since.timestamp() * 1e3)
 
-    params = {}
+    params = dict(end = None)
     if exchange == "bitfinex":
-        params = {'end' : round(end.timestamp() * 1e3)}
+        # TODO(nochiel) Is this needed? 
+        # params['end'] = round(end.timestamp() * 1e3)
+        ...
 
     candles = None
-    try:
-        wait = exchange.rateLimit * 1e-3
-        while wait:
-            try:
-                candles = exchange.fetchOHLCV(
-                        symbol      = pair, 
-                        limit       = limit, 
-                        timeframe   = timeframe, 
-                        since       = _since, 
-                        params      = params)
+    rate_limit = exchange.rateLimit * 1e-3
+    wait = rate_limit
+    while wait:
+        try:
+            candles = exchange.fetchOHLCV(
+                    symbol      = pair, 
+                    limit       = limit, 
+                    timeframe   = timeframe, 
+                    since       = _since, 
+                    params      = params)
 
-                wait = 0
+            wait = 0
 
-            except ccxt.errors.RateLimitExceeded as e:
-                logger.debug(f'{e}. Rate limit for {exchange} is {exchange.rateLimit}')
-                time.sleep(wait)
-                wait *= 2
-
-    except Exception as e:
-        logger.error(f'{exchange} candle request error: {e}')
+        except (ccxt.errors.RateLimitExceeded, ccxt.errors.DDoSProtection) as e:
+            logger.error(f'{exchange} candle request error: {e}')
+            time.sleep(wait)
+            wait *= rateLimit
+            if wait > 60: wait = 0
 
     if candles:
         result = [Candle(
