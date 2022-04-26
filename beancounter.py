@@ -13,6 +13,7 @@
 
 import asyncio
 from datetime import datetime
+from fastapi import HTTPException
 import time
 
 from pydantic import BaseModel
@@ -132,6 +133,7 @@ TransactionDetailsForAddresses = dict[Address, list[TransactionDetails]]
 async def make_transaction_details(
         addresses, 
         transactions: list[Transactions],
+        exchange, currency,
         server = spotbit.app,
         ) -> TransactionDetailsForAddresses:
 
@@ -160,37 +162,16 @@ async def make_transaction_details(
         from fastapi.testclient import TestClient
         client = TestClient(server)
 
-        assert spotbit.supported_exchanges
         candles = []
-        for exchange in spotbit.supported_exchanges:
 
+        try:
             candles = await spotbit.get_candles_at_dates(
-                    currency = spotbit.CurrencyName.USD,
-                    exchange = spotbit.ExchangeName.BITSTAMP,
+                    exchange = exchange,
+                    currency = currency,
                     dates = timestamps_to_get)
 
-            if candles:
-                if len(candles) == len(transactions): break
-
-            '''
-            response = client.post(f'/history/USD/{exchange}', 
-                    json   = timestamps_to_get)    
-
-            if response.ok:
-
-                data = response.json()
-                logger.debug(f'data: {data}')
-                if data:
-                    candles = [spotbit.Candle(**candle) for candle in data]
-                    logger.debug(f'candles: {candles}')
-
-                    if len(candles) < len(transactions): continue
-
-                    break
-            else:
-                logger.error(f'{response.status}: {response.data}')
-                continue
-            '''
+        except HTTPException as e:
+            logger.error(e.detail)
 
         if candles:
             assert len(candles) == len(transactions), f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}'
@@ -235,14 +216,16 @@ async def make_transaction_details(
 
     return result
 
-def make_records(transaction_details: TransactionDetailsForAddresses, 
+def make_records(*, transaction_details: TransactionDetailsForAddresses, 
         addresses: list[Address], 
-        transactions: list[Transactions]
+        transactions: list[Transactions],
+        currency: spotbit.CurrencyName
         ) -> str:
 
     assert transaction_details
     assert addresses
     assert transactions
+    assert currency
 
     # FIXME I can't use the beancount api to create a data structure that I can then dump to a beancount file.
     # Instead I must emit strings then load the strings to test for correctness.
@@ -259,7 +242,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
     country = ''
     institution = ''
     btc_account_name = 'BTC'
-    usd_account_name = 'USD'    # TODO(nochiel) The users sets the currency.
+    fiat_account_name = currency.value 
     subaccount_name = ''
 
     from beancount.core import account
@@ -271,7 +254,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
 
     # Test: Treat cash as a liability.
     # TODO(nochiel) Store the exchange rate at each transaction date.
-    components = ['liabilities'.title(), 'Cash', usd_account_name, subaccount_name]
+    components = ['liabilities'.title(), 'Cash', fiat_account_name, subaccount_name]
     components = [c for c in components if c != '']
     fiat_account = account.join(*components)
     assert account.is_valid(fiat_account), f'Account name is not valid. Got: {fiat_account}'
@@ -311,7 +294,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     account_directives = [
             f'{date_of_account_open} open {btc_account}\tBTC',
-            f'{date_of_account_open} open {fiat_account}\tUSD',
+            f'{date_of_account_open} open {fiat_account}\t{currency}',
             ]
 
     transactions_by_hash = {tx['txid'] : tx 
@@ -413,11 +396,11 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
 
                     transaction_fiat_amount = detail.twap * payee.amount * 1e-8
                     if not detail.is_input:
-                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} USD }}' 
+                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency} }}' 
                     if detail.is_input: 
-                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} USD\t' 
+                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency}\t' 
                     fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                            + f'{transaction_fiat_amount : .2f} USD\t')
+                            + f'{transaction_fiat_amount : .2f} {currency}\t')
 
                     payee_transaction_directive = btc_payee_transaction_directive
                     payee_transaction_directive += '\n'
@@ -445,7 +428,7 @@ def make_records(transaction_details: TransactionDetailsForAddresses,
 
     return document
 
-async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.TESTNET):
+async def make_beancount_file_for(descriptor: Descriptor, exchange, currency, network = bdk.Network.TESTNET):
 
     assert descriptor
 
@@ -487,7 +470,12 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
         return
 
     logger.debug('Making transaction details.')
-    transaction_details = await make_transaction_details(addresses = addresses, transactions = transactions)
+    transaction_details = await make_transaction_details(
+            addresses = addresses, 
+            transactions = transactions,
+            exchange = exchange,
+            currency = currency)
+
     # logger.debug(transaction_details)
 
     if not transaction_details:
@@ -496,17 +484,17 @@ async def make_beancount_file_for(descriptor: Descriptor, network = bdk.Network.
     # logger.debug(f'transaction_details: {transaction_details}')
 
     logger.debug('Making beancount file.')
-    beancount_document = make_records(transaction_details = transaction_details, 
-            addresses = addresses, transactions = transactions)
+    beancount_document = make_records(
+            transaction_details = transaction_details, 
+            addresses = addresses, transactions = transactions,
+            currency = currency)
     if not beancount_document:
         raise Exception('the beancountfile was not generated')
     if beancount_document:
         with open('spotbit.beancount', mode = 'w') as file:
             file.write(beancount_document)
 
-def make_beancount_from_descriptor(descriptor: Descriptor):
-
-    # TODO(nochiel) Use descriptor
+def make_beancount_from_descriptor(descriptor: Descriptor, exchange, currency, network = bdk.Network.BITCOIN):
 
     def init():
         assert logger
@@ -514,27 +502,6 @@ def make_beancount_from_descriptor(descriptor: Descriptor):
         logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
 
     init()
-
-    descriptors = {
-            'bdk':"wpkh(tprv8ZgxMBicQKsPcx5nBGsR63Pe8KnRUqmbJNENAfGftF3yuXoMMoVJJcYeUw5eVkm9WBPjWYt6HMWYJNesB5HaNVBaFc1M6dRjWSYnmewUMYy/84h/1h/0h/0/*)",
-
-            'test': {
-
-                # Using test xpub for large wallet. https://github.com/spesmilo/electrum/issues/6625#issuecomment-724912330
-                # Given an xpub, how do I generate a descriptor?
-                # Ref. https://bitcoindevkit.org/docs-rs/bdk/nightly/latest/bdk/macro.descriptor.html
-                # Ref. https://bitcoin.stackexchange.com/questions/102502/import-multisig-wallet-into-bitcoin-core-vpub-keys-are-not-valid-how-to
-                # To convert vpub into wpkh Ref. https://jlopp.github.io/xpub-converter/
-
-                'xpub' : 'vpub5VfkVzoT7qgd5gUKjxgGE2oMJU4zKSktusfLx2NaQCTfSeeSY3S723qXKUZZaJzaF6YaF8nwQgbMTWx54Ugkf4NZvSxdzicENHoLJh96EKg',
-
-                'pubkey': "wpkh(tpubD9hudZxy8Uj3453QrsEbr8KiyXTYC5ExHjJ5sNDVW7yKJ8wc7acKQcpdbvZX6dFerHK6MfVvs78VvGfotjN28yC4ij6nr4uSVhX2qorUV8V/0/*)", 
-                'change': "wpkh(tpubD9hudZxy8Uj3453QrsEbr8KiyXTYC5ExHjJ5sNDVW7yKJ8wc7acKQcpdbvZX6dFerHK6MfVvs78VvGfotjN28yC4ij6nr4uSVhX2qorUV8V/1/*)", 
-                },
-
-            # TODO Handle multisig descriptors. Don't I need the xpubs for cosigners?
-
-            }
 
     # FIXME Given an xpub make sure change addresses are also generated.
     # Take _GAP_SIZE depth. Generate 1 key at each depth. 
@@ -544,11 +511,5 @@ def make_beancount_from_descriptor(descriptor: Descriptor):
     # FINDOUT How do I ensure bdk does this automatically? 
     # FINDOUT How does Electrum get all the relevant descriptors when given an xpub? Depth search?
 
-    descriptor = descriptors['test']['pubkey']  
-    logger.debug(f'testing using descriptor: {descriptor}')
-    asyncio.run(make_beancount_file_for(descriptor,))
+    asyncio.run(make_beancount_file_for(descriptor, exchange, currency, network))
 
-    import blockchaincommons as bc
-    # descriptor = bc.descriptors['BlockchainCommons']['test']  
-    # logger.debug(f'testing using descriptor: {descriptor}')
-    # asyncio.run(make_beancount_file_for(descriptor, network = bdk.Network.BITCOIN))  
