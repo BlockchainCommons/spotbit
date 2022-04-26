@@ -173,7 +173,6 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
     latest_candle = None
     dt = None
 
-
     if exchange.has['fetchOHLCV']:
         logger.debug('fetchOHLCV')
 
@@ -365,7 +364,7 @@ async def now_average(currency: CurrencyName):
 
     logger.debug(f'currency: {currency}')
 
-    def get_candle(exchange: ccxt.Exchange, currency: CurrencyName) -> tuple[ccxt.Exchange, Candle | None]:
+    def get_candle(exchange: ccxt.Exchange, currency: CurrencyName = currency) -> tuple[ccxt.Exchange, Candle | None]:
         assert exchange
         assert currency
 
@@ -374,7 +373,7 @@ async def now_average(currency: CurrencyName):
         if currency.value in exchange.currencies:
             try:
                 candle = None
-                candle = request_single(exchange, currency.value)
+                candle = request_single(exchange, currency)
                 if candle:
                     result = exchange, candle 
             except Exception as e:
@@ -382,7 +381,7 @@ async def now_average(currency: CurrencyName):
 
         return result
 
-    tasks = [asyncio.to_thread(get_candle, exchange, currency)
+    tasks = [asyncio.to_thread(get_candle, exchange)
             for exchange in supported_exchanges.values()]
     task_results = await asyncio.gather(*tasks)
     logger.debug(f'task results: {task_results}')
@@ -681,53 +680,4 @@ async def get_candles_at_dates(
 
     return result
 
-def tests():
-    # Placeholder
-    # Expected: validation errors or server errors or valid responses.
-    # TODO(nochiel) Make these robust.
-
-    from fastapi.testclient import TestClient
-    client = TestClient(app)
-
-    response = client.get('http://[::1]:5000/api/now/FOOBAR')
-    assert not response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/usd')
-    assert not response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/USD')
-    assert response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/JPY')
-    assert response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/USD/Bitstamp')
-    assert not response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/USD/bitstamp')
-    assert response.status_code == 200
-
-    response = client.get('http://[::1]:5000/api/now/usdt/bitstamp')  
-    assert not response.status_code == 200
-
-    response = client.get(
-            'http://[::1]:5000/api/history/USD/bitstamp?start=2019-01-01T0000&end=1522641600'
-            )
-    assert response.status_code == 200
-
-    response = client.get(
-            "http://[::1]:5000/api/history/USD/liquid?start=2022-01-01T00:00&end=2022-02-01T00:00"
-            )
-    assert response.status_code == 200
-
-    response = client.post('http://[::1]:5000/history/USDT/binance',
-            json = ['2022-01-01T00:00', '2022-02-01T00:00', '2021-12-01T00:00']
-            )
-    assert response.status_code == 200
-
-    response = client.post(
-            "http://[::1]:5000/api/history/JPY/liquid",
-            json=["2022-01-01T00:00", "2022-02-01T00:00", "2021-12-01T00:00"],
-            )
-    assert response.status_code == 200
 
