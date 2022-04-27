@@ -60,12 +60,14 @@ python-dotenv==0.19.2
 requests==2.27.1
 rsa==4.8
 setuptools==60.9.3
+shellingham==1.4.0
 six==1.16.0
 sniffio==1.2.0
 soupsieve==2.3.2
 starlette==0.17.1
 toml==0.10.2
 tomli==2.0.1
+typer==0.4.1
 typing_extensions==4.1.1
 uritemplate==4.1.1
 urllib3==1.26.8
