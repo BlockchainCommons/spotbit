@@ -171,7 +171,7 @@ async def make_transaction_details(
                     dates = timestamps_to_get)
 
         except HTTPException as e:
-            logger.error(e.detail)
+            raise Exception(e.detail) from e
 
         if candles:
             assert len(candles) == len(transactions), f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}'
@@ -294,7 +294,7 @@ def make_records(*, transaction_details: TransactionDetailsForAddresses,
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     account_directives = [
             f'{date_of_account_open} open {btc_account}\tBTC',
-            f'{date_of_account_open} open {fiat_account}\t{currency}',
+            f'{date_of_account_open} open {fiat_account}\t{currency.value}',
             ]
 
     transactions_by_hash = {tx['txid'] : tx 
@@ -396,11 +396,11 @@ def make_records(*, transaction_details: TransactionDetailsForAddresses,
 
                     transaction_fiat_amount = detail.twap * payee.amount * 1e-8
                     if not detail.is_input:
-                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency} }}' 
+                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency.value} }}' 
                     if detail.is_input: 
-                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency}\t' 
+                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency.value}\t' 
                     fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                            + f'{transaction_fiat_amount : .2f} {currency}\t')
+                            + f'{transaction_fiat_amount : .2f} {currency.value}\t')
 
                     payee_transaction_directive = btc_payee_transaction_directive
                     payee_transaction_directive += '\n'
@@ -428,7 +428,10 @@ def make_records(*, transaction_details: TransactionDetailsForAddresses,
 
     return document
 
-async def make_beancount_file_for(descriptor: Descriptor, exchange, currency, network = bdk.Network.TESTNET):
+async def make_beancount_file_for(descriptor: Descriptor, 
+        exchange, 
+        currency: spotbit.CurrencyName, 
+        network = bdk.Network.TESTNET):
 
     assert descriptor
 

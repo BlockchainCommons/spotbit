@@ -401,7 +401,7 @@ async def now_average(currency: CurrencyName):
     else:
         raise HTTPException(
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR,
-                detail      =  'Spotbit could get any candle data from the configured exchanges.')
+                detail      =  'Spotbit could not get any candle data from the configured exchanges.')
 
     exchanges_used = [exchange.name for exchange in supported_exchanges.values()
             if exchange.name not in failed_exchanges]
@@ -472,16 +472,19 @@ def get_history(*,
     result = None
 
     _since = round(since.timestamp() * 1e3)
-
-    params = dict(end = None)
+    params = dict()
     if exchange == "bitfinex":
         # TODO(nochiel) Is this needed? 
         # params['end'] = round(end.timestamp() * 1e3)
         ...
 
     candles = None
-    rate_limit = exchange.rateLimit * 1e-3
-    wait = rate_limit
+
+    # @nochiel: Re. Bitmex. Rate-limiting is very aggressive on authenticated API calls.
+    # For a large number of requests this throttling doesn't help and Bitmex will increase
+    # its rate limit to 3600 seconds!
+    # Serializing requests won't help either
+    wait            = exchange.rateLimit * 1e-3
     while wait:
         try:
             candles = exchange.fetchOHLCV(
@@ -494,10 +497,15 @@ def get_history(*,
             wait = 0
 
         except (ccxt.errors.RateLimitExceeded, ccxt.errors.DDoSProtection) as e:
-            logger.error(f'{exchange} candle request error: {e}')
+            logger.error(f'rate-limited on {exchange}: {e}')
+            logger.error(f'waiting {wait} seconds on {exchange} before making another request')
             time.sleep(wait)
-            wait *= rateLimit
-            if wait > 60: wait = 0
+            wait *= 2
+            if wait > 120: 
+                raise Exception(f'{exchange} has rate limited spotbit') from e
+
+        except Exception as e:
+            logger.error(f'{exchange} candle request error: {e}')
 
     if candles:
         result = [Candle(
@@ -610,7 +618,7 @@ async def get_candles_in_range(
     if received_number_of_candles < expected_number_of_candles:
         logger.info(f'{ccxt_exchange} does not have data for the entire period. Expected {expected_number_of_candles} candles. Got {received_number_of_candles} candles')
 
-    if candles is None or len(candles) == 0:
+    if not candles:
         raise HTTPException(
                 detail  = f'Spotbit did not receive any candle history for the period {start} - {end} from {ccxt_exchange}',
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -673,10 +681,13 @@ async def get_candles_at_dates(
     tasks = [asyncio.to_thread(get_history, **arg) 
             for arg in args]
     candles_found = await asyncio.gather(*tasks)
+    
+    result = [candles_at[0] for candles_at in candles_found if candles_at]
+    if not result:
+        raise HTTPException(
+                detail  = f'Spotbit did not receive any candle history for the requested dates.',
+                status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    candles = []
-    if candles_found: 
-        result = [candles_at[0] for candles_at in candles_found if candles_at]
 
     return result
 
