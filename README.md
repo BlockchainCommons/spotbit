@@ -13,10 +13,9 @@ Users may choose to run their own local **Spotbit** server, or simply to connect
 
 **Why Use Spotbit?**
 
-1. **Privacy.** Spotbit is the only way to anoymize your Bitcoin pricing via a Tor connection.
-1. **Speed.** Spotbit provides information more quickly and at a higher rate due to the use of a local database.
-1. **Reliability.** Spotbit aggregrates information, making your pricing data more trustworthy.
-1. **Self-sovereignty.** Spotbit runs from your server (or that of your choice), saves to your database, and allows you to choose the pricing services relevant to your trading pair.
+1. **Privacy.** Spotbit can work as a Tor hidden service.
+1. **Reliability.** Spotbit aggregrates information using the exchanges/sources you configure, making your pricing data more trustworthy.
+1. **Self-sovereignty.** Spotbit can run from your server. 
 
 ## Additional Information
 
@@ -96,7 +95,7 @@ The Flask server runs over port 5000. The following API routes can be used via t
 * `/now/<currency>/<exchange>`
     - Returns the latest candle for BTC/currency (if supported by the exchange API), or the latest spot price. 
     - currency is a three letter fiat currency (e.g. USD, JPY, etc)
-    - exchange is the name of an exchange supported by CCXT. If the exchange is already in the config file, then the newest row from your local database is returned. If the exchange is not supported, then Spotbit will directly request this exchange and return data, but it will not be stored locally.
+    - exchange is the name of an exchange supported by CCXT. It is used if Spotbit is configured to use the exchange. If the exchange is not supported, then Spotbit will return an error.
     - Example response:
     ```
     {"close":10314.06,"currency_pair":"BTC-USD","datetime":"2020-09-13 14:31:00","high":10315.65,"id":122983,"low":10314.06,"open":10315.65,"timestamp":1600007460000,"vol":3.53308926}
@@ -136,8 +135,6 @@ You can check on a spotbit's status at any time by running `sudo systemctl statu
 
 Spotbbit uses a config file located at `/home/spotbit/.spotbit/spotbit.config` to store settings. The allowed fields are:
 
-* `keepWeeks`
-    - The number of weeks worth of data to keep in the database for exchanges that you are not retrieving history for. This setting does not apply to exchanges that have a long-term history.
 * `exchanges`
     - The exchanges you want to get current data for. They should be supplied as a list of lowercase names separated by spaces. By default, spotbit.config will include the exchanges needed to create averages for you in USD, GBP, EUR, JPY and USDT.
 * `currencies`
@@ -211,7 +208,7 @@ To use Spotbit you'll need to use the following tools:
 All of these Python libraries can be installed via pip and Python3.8 can be installed for you in the install script.
 
 ### Motivation
-Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. Additionally, the use of local storage means that data can always be served quickly even while new data are being downloaded. Spotbit runs two separate threads - one with the Flask webserver, and another that makes API requests to exchanges to update the local database.
+Spotbit aims to provide an easy option for aggregating exchange data that does not require the use of a third party data website like Coinmarketcap. These data can be used inside of other apps or for personal use / analysis. Acquiring data across many exchanges can be a pain because normally one would need write slightly different code in order to interact with each API. 
 
 ### Derived from…
 This  Spotbit project is either derived from or was inspired by the need of Fully Noded 2 to display realtime price info in-app:
