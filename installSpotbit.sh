@@ -37,7 +37,7 @@ config_get() {
 # system
 NOPROMPT="$(config_get NOPROMPT)"
 USERPASSWORD="$(config_get USERPASSWORD)"
-INSTALL_PYTHON38="$(config_get INSTALL_PYTHON38)"
+INSTALL_PYTHON310="$(config_get INSTALL_PYTHON310)"
 
 # vps
 VPS="$(config_get VPS)"
@@ -168,7 +168,7 @@ System
 ------
 NOPROMPT..........: $NOPROMPT
 USERPASSWORD......: $USERPASSWORD
-INSTALL_PYTHON38..: $INSTALL_PYTHON38
+INSTALL_PYTHON310..: $INSTALL_PYTHON310
 
 VPS
 ---
@@ -392,25 +392,25 @@ fi
 ####
 # 5. Install python & python dependencies
 ####
-if "$INSTALL_PYTHON38"; then
+if "$INSTALL_PYTHON310"; then
   echo "
   ----------------
-  $MESSAGE_PREFIX Installing python 3.8
+  $MESSAGE_PREFIX Installing python 3.10
   ----------------
 "
   apt-get install build-essential checkinstall -y
   apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev -y
   mkdir ~spotbit/downloads
   chown -R spotbit ~spotbit/downloads
-  sudo -u spotbit wget --progress=bar:force https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tgz -O ~spotbit/downloads/Python-3.8.5.tgz
   cd ~spotbit/downloads
-  tar xzf Python-3.8.5.tgz
-  cd Python-3.8.5
+  sudo -u spotbit wget --progress=bar:force https://www.python.org/ftp/python/3.10.4/Python-3.10.4.tgz 
+  tar xzf Python-3.10.4.tgz 
+  cd Python-3.10.4
   ./configure --enable-optimizations
   make altinstall # altinstall to prevent replacing default python binary at /usr/bin/python
-  if ! [[ -z "$(python3.8 -V)" ]]; then
+  if ! [[ -z "$(python3.10 -V)" ]]; then
     echo "
-    $MESSAGE_PREFIX installed $(python3.8 -V)"
+    $MESSAGE_PREFIX installed $(python3.10 -V)"
   fi
 fi
 
@@ -421,7 +421,7 @@ echo "
 $MESSAGE_PREFIX Installing python dependencies
 ----------------
 "
-python3.8 -m pip install -r requirements.txt
+python3.10 -m pip install -r requirements.txt
 
 cd "$SCRIPTS_DIR"
 
@@ -435,7 +435,7 @@ else
   mkdir /home/spotbit/.spotbit
   chown -R spotbit /home/spotbit/.spotbit
   touch /home/spotbit/.spotbit/spotbit.config
-  cat spotbit_example.config >> /home/spotbit/.spotbit/spotbit.config
+  cat spotbit.config >> /home/spotbit/.spotbit/spotbit.config
 fi
 
 
@@ -456,7 +456,7 @@ Requires=tor.service
 After=tor.service
 
 [Service]
-ExecStart=/usr/local/bin/python3.8 /home/spotbit/spotbit/server.py
+ExecStart=/usr/local/bin/python3.10 /home/spotbit/spotbit/app.py
 
 # Process management
 ####################
