@@ -696,11 +696,10 @@ if __name__ == '__main__':
     import uvicorn
 
     assert logger
-    logger.debug('Running in debug mode')
-    logger.debug(f'app.debug: {app.debug}')
+    logger.info(f'app.debug: {app.debug}')
     uvicorn.run('app:app', 
             host ='::', 
             port = 5000, 
-            debug = True,
-            log_level = 'debug', 
-            reload = True)
+            debug = app.debug,
+            log_level = 'debug' if app.debug else 'info', 
+            reload = app.debug)
