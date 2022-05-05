@@ -26,10 +26,10 @@ if __name__ == '__main__':
             assert logger
             logger.info(f'server.app.debug: {server.app.debug}')
             uvicorn.run('server:app', 
-                    host ='::', 
+                    host ='127.0.0.1'
                     port = 5000, 
                     debug = server.settings.debug,
-                    log_level = 'debug' if server.settings.debug else 'info',     # TODO(nochiel) TEST
+                    log_level = 'debug' if server.settings.debug else 'info',
                     reload = server.settings.debug,
                     reload_includes = ['spotbit.config']  # FIXME(nochiel) Does nothing? 
                     )
