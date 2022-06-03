@@ -10,7 +10,7 @@ attrs==21.4.0
 bdkpython==0.0.5
 beancount==2.3.5
 beautifulsoup4==4.10.0
-bottle==0.12.19
+bottle==0.12.20
 buidl==0.2.36
 cachetools==5.0.0
 ccxt==1.74.49
