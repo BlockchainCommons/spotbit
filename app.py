@@ -26,7 +26,7 @@ if __name__ == '__main__':
             assert logger
             logger.info(f'server.app.debug: {server.app.debug}')
             uvicorn.run('server:app', 
-                    host ='127.0.0.1'
+                    host ='127.0.0.1',
                     port = 5000, 
                     debug = server.settings.debug,
                     log_level = 'debug' if server.settings.debug else 'info',
@@ -38,7 +38,7 @@ if __name__ == '__main__':
         default_currency    = server.settings.currencies[0]
         @cli.command()
         def beancount(descriptor: beancounter.Descriptor,
-                network:  Network = Network.TESTNET.value,
+                network:  str = Network.TESTNET.value,
                 exchange: server.ExchangeName = default_exchange_id,
                 currency: server.CurrencyName = default_currency):
             '''
