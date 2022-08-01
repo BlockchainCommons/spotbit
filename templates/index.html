@@ -1,27 +1,589 @@
+
 <!DOCTYPE html>
-<h1>This Onion v3 Address is Running Spotbit</h1>
-<h2>What is Spotbit?</h2>
-<p>Spotbit is a decentralized alternative to services such as coinmarketcap and coingecko. Spotbit aggregates data for dozens of exchanges and provides their data over a single tor API endpoint.</p>
-<h2>How do I use Spotbit?</h2>
-<p>Spotbit is an API service running on this server. To access it, you can use the API endpoints it provides: /configure will give you information on how this server is configured. /now/[currency]/[exchange] will give you the current information about a certain currency. And /hist/[currency]/[exchange]/[start_date]/[end_date] gives historical data.</currency></p>
-<p>You can find out more about how to use Spotbit <a href="https://github.com/BlockchainCommons/spotbit">here</a></p>
-<h2>Example Usage</h2>
-<h3>Fetching current data for a specific currency and exchange</h3>
-<p>Currency: USD, Exchange: Coinbasepro
-    <a href="{{ fetch_0 }}">/now/USD/coinbasepro</a>
-</p>
-<h3>Fetching current averaged data for a currency</h3>
-<p>Currency: USD. Spotbit takes the simple average of the 5 exchanges listed in the <a href="https://github.com/BlockchainCommons/spotbit">README</a> for a currency. The data returned is an average open price, average high price, average low price, and average close price. 
-    <a href="{{ fetch_1 }}">/now/USD</a>
-    <h4>Example Response:</h4>
-    <p>{"close":10596.524000000001,"currency_pair":"BTC-USD","datetime":"Fri, 02 Oct 2020 02:14:14 GMT","exchanges":["coinbasepro","okcoin","bitfinex","kraken","bitstamp"],"failed_exchanges":[],"high":10597.35,"id":"average_value","low":10595.653379728,"oldest_timestamp":1601604420000,"open":10596.451379728,"timestamp":1601604854227.924,"volume":0.41027291399999993}</p>
-</p>
-<h3>Fetching historical data</h3>
-<p>Currency: USD, Exchange: Coinbasepro, Time Range: {{ date_start }} to {{ date_end }}
-    <a href="{{ fetch_2 }}">/hist/USD/coinbasepro/{{ date_start}}/{{ date_end }}</a>
-</p>
-<h3>Viewing the server's configuration</h3>
-<p>
-    <a href="{{ fetch_3 }}">/configure</a>
-</p>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>SpotBit</title>
+     <style>
+        #chart_div {
+            width: 800px;
+            height: 400px;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+    <!-- <base href="/spotbit/"> -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
+    <!-- <link id="crypto-stylesheet" rel="stylesheet" href="assets/css/night-gold-orange.css"> -->
+    <link href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}" rel="stylesheet">
+  </head>
+
+  <body class="mdc-typography pace-on mdc-theme--background crypro-theme-gradient">
+
+    <div class="crypto-loader"></div>
+    <div class="crypto-wrapper">
+      <div class="crypto-sidenav">
+        <nav class="crypto-navigation">
+  <a href="/" class="crypto-navigation__logo">
+    <!-- Image element or even SVG can be used here -->
+    <img src="{{ url_for('static', path='/assets/images/bc.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+  </a>
+  <ul class="crypto-navigation__list">
+      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+        <a href="#">
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
+          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+            Main 
+          </span>
+        </a>
+      </li>
+  </ul>
+  <ul class="crypto-navigation__list">
+      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+        <a href="/faq">
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
+          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+            FAQ 
+          </span>
+        </a>
+      </li>
+  </ul>
+  <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
+	  <img src="{{ url_for('static', path='/assets/images/bc.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+   </a>
+	</nav>
+
+
+      </div>
+      <main class="crypto-main">
+        <div class="crypto-main__content mdc-theme--text-primary-on-background">
+
+  <div class="mdc-layout-grid">
+    <div class="mdc-layout-grid__inner">
+      <div class="mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
+        <div class="crypto-widget">
+          <h2 class="crypto-widget__heading mdc-typography--overline mdc-theme--primary">
+            <span class="crypto-widget__heading-text"><h2>Spotbit</h2></span>
+            <span class="crypto-widget__heading-border"></span>
+          </h2>
+        <div class="crypto-widget__content">
+            <div class="crypto-wallet-overview">
+ 	        	  <div>Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the Gordian Wallet can communicate with Bitcoin Core through Tor, Bitcoin price services traditially have not. This creates a potential red flag in a state that is antagonistic toward Bitcoin. Spotbit is the answer. It is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that permits the user to collect information over Tor. It can aggregate data from over 100 exchanges and serve them from a single URL or as onion hidden service using Tor. Spotbit is extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR, etc.), which exchanges to keep data for, and how much data to keep.
+		          </div>
+	            <span class="crypto-wallet-overview__market-value mdc-theme--primary"></span>
+            </div>
+        </div>
+       </div>
+        <div class="crypto-widget">
+          <h2 class="crypto-widget__heading mdc-typography--overline mdc-theme--primary">
+            <span class="crypto-widget__heading-text">Why Spotbit</span>
+            <span class="crypto-widget__heading-border"></span>
+          </h2>
+          <div class="crypto-widget__content">
+		 <ul class="crypto-border-list">
+              <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
+                <!-- BTC WALLET -->
+                <a href="#" class="mdc-theme--on-surface">
+                  <h3 class="crypto-wallet__name mdc-typography--overline">Privacy</h3>
+                  <h1 class="crypto-wallet__value mdc-typography--headline3">anoymize your pricing</h1>
+                  <span class="crypto-coin__border mdc-theme--primary-bg"></span>
+                  <span class="crypto-border-list__border-hover mdc-theme--secondary-bg"></span>
+                </a>
+              </li>
+              <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
+                <!-- BTC WALLET -->
+                <a href="#" class="mdc-theme--on-surface">
+                  <h4 class="crypto-wallet__name mdc-typography--overline">Speed</h4>
+                  <h2 class="crypto-wallet__value mdc-typography--headline3">higher rate data</h2>
+                  <span class="crypto-coin__border mdc-theme--primary-600-bg"></span>
+                  <span class="crypto-border-list__border-hover mdc-theme--secondary-bg"></span>
+                </a>
+              </li>
+              <li class="crypto-border-list__item crypto-border-list__item--large crypto-wallet ">
+                <!-- BTC WALLET -->
+                <a href="#" class="mdc-theme--on-surface">
+                  <h4 class="crypto-wallet__name mdc-typography--overline">Self-sovereignty</h4>
+                  <h2 class="crypto-wallet__value mdc-typography--headline3">choose the pricing services</h2>
+                  <span class="crypto-coin__border mdc-theme--primary-800-bg"></span>
+                  <span class="crypto-border-list__border-hover mdc-theme--secondary-bg"></span>
+                </a>
+              </li>
+            </ul>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="mdc-layout-grid__cell--span-9-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
+        <div class="crypto-widget">
+          <div class="mdc-layout-grid__inner">
+            <div class="mdc-layout-grid__cell--span-6">
+              <h2 class="crypto-widget__heading mdc-typography--overline mdc-theme--primary">
+                <span class="crypto-widget__heading-text">Live Updates</span>
+                <span class="crypto-widget__heading-border"></span>
+              </h2>
+            </div>
+            <div class="mdc-layout-grid__cell--span-6 crypto-hide-tablet crypto-hide-phone crypto-widget__actions">
+              <a href="#_$" class="mdc-button mdc-button--raised">Bitcoin</a>
+            </div>
+          </div>
+          <div class="crypto-widget__content">
+<!--            <div id="wallets-performance-chart"></div>-->
+		<div id="chart_div"></div>				
+          </div>
+        </div>
+        <div class="crypto-widget">
+          <div class="mdc-layout-grid__inner">
+            <div class="mdc-layout-grid__cell--span-6-desktop mdc-layout-grid__cell--span-6-tablet mdc-layout-grid__cell--span-3-phone">
+              <h2 class="crypto-widget__heading mdc-typography--overline mdc-theme--primary">
+                <span class="crypto-widget__heading-text">Exchanges</span>
+                <span class="crypto-widget__heading-border"></span>
+              </h2>
+            </div>
+          </div>
+          <div class="crypto-widget__content crypto-overflow-x-auto">
+            <table class="mdl-data-table mdc-typography--overline">
+              <thead class="crypto-transactions-list__labels">
+                <tr>
+                  <th></th>
+                  <th class="mdl-data-table__cell--non-numeric">Name</th>
+                  <th class="mdl-data-table__cell--non-numeric">Currency</th>
+                  <th class="mdl-data-table__cell--non-numeric">URL</th>
+                  <th></th>
+                  <th class="mdl-data-table__cell--non-numeric">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">CoinbasePro</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - GBP - EUR - </td>
+                  <td class="mdl-data-table__cell--non-numeric">api-public.sandbox.pro.coinbase.com</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--pending"><div id="coinbase"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+              <tbody class="crypto-transactions-list__separator">
+                <tr><td colspan="7"></td></tr></tbody>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">Bitfinex</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR - </td>
+                  <td class="mdl-data-table__cell--non-numeric">api-pub.bitfinex.com/v2</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="bitfinex"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+
+              <tbody class="crypto-transactions-list__separator">
+                <tr><td colspan="7"></td></tr></tbody>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">Kraken</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR - GBP - </td>
+                  <td class="mdl-data-table__cell--non-numeric">api.kraken.io/v1/</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="kraken"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+
+              <tbody class="crypto-transactions-list__separator">
+                <tr><td colspan="7"></td></tr></tbody>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">Gemini</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR</td>
+                  <td class="mdl-data-table__cell--non-numeric">https://api.gemini.com/v1/</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="gemini"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+
+	       <tbody class="crypto-transactions-list__separator">
+                <tr><td colspan="7"></td></tr></tbody>
+              <tbody>
+                <tr class="crypto-transactions-list__item">
+                  <td class="mdl-data-table__cell--icon"><i class="fab fa-bitcoin"></i></td>
+                  <td class="mdl-data-table__cell--non-numeric">Bitstamp</td>
+                  <td class="mdl-data-table__cell--non-numeric">USD - EUR</td>
+                  <td class="mdl-data-table__cell--non-numeric">https://api.gemini.com/v1/</td>
+                  <td><span class="crypto-transactions-list__item-price"></span></td>
+                  <td class="mdl-data-table__cell--non-numeric crypto-transactions-list__status crypto-transactions-list__status--confirmed"><div id="bitstamp"></div></td>
+                </tr>
+                <tr class="crypto-transactions-list__item--details">
+                  <td colspan="7">
+                    <div class="mdc-layout-grid">
+                      <div class="mdc-layout-grid__inner">
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Version no <span class="mdc-list-item__meta">1</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Flag <span class="mdc-list-item__meta">0001</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Lock time <span class="mdc-list-item__meta">135180102155</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6">
+                          <ul class="mdc-list mdc-list--dense demo-list">
+                            <li class="mdc-list-item">
+                              Witnesses <span class="mdc-list-item__meta">2</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              In-counter <span class="mdc-list-item__meta">177165211146174175</span>
+                            </li>
+                            <li class="mdc-list-item">
+                              Out-counter <span class="mdc-list-item__meta">111232135106240239</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+
+
+            </table>
+          </div><!-- cryto-widget end -->
+          <div class="mdc-snackbar mdc-elevation--z24"
+              aria-live="assertive"
+              aria-atomic="true"
+              aria-hidden="true">
+            <div class="mdc-snackbar__text"></div>
+            <div class="mdc-snackbar__action-wrapper">
+              <button type="button" class="mdc-snackbar__action-button"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside id="my-mdc-dialog"
+    class="mdc-dialog"
+    aria-labelledby="my-mdc-dialog-label"
+    aria-describedby="my-mdc-dialog-description">
+    <div class="mdc-dialog__surface">
+      <header class="mdc-dialog__header">
+        <h2 id="my-mdc-dialog-label" class="mdc-dialog__header__title">
+          Add A New Wallet
+        </h2>
+      </header>
+      <div id="my-mdc-dialog-description" class="mdc-dialog__body">
+        <div class="crypto-display-flex crypto-display-flex--end crypto-margin-bottom-big">
+          <div class="mdc-text-field crypto-display-flex__flexed mdc-text-field--fullwidth">
+            <input type="text" id="wallet-name" class="mdc-text-field__input" placeholder="Wallet Name">
+            <div class="mdc-line-ripple"></div>
+          </div>
+          <div class="mdc-select mdc-select-box crypto-coin-select" id="coin-select">
+            <select class="mdc-select__native-control">
+              <option value="btc" selected>BTC</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <footer class="mdc-dialog__footer">
+        <button type="button" class="mdc-button mdc-dialog__footer__button mdc-dialog__footer__button--cancel">Cancel</button>
+        <button type="button" class="mdc-button mdc-dialog__footer__button mdc-dialog__footer__button--accept mdc-dialog__action">Add</button>
+      </footer>
+    </div>
+    <div class="mdc-dialog__backdrop"></div>
+  </aside>
+        </div>
+
+      </main>
+
+    </div>
+
+    <div class="crypto-menu-switches">
+  <div class="crypto-menu-switches--handle">
+    <i class="material-icons">settings</i>
+  </div>
+  <!-- RTL switch -->
+  <div class="switch-wrapper mdc-theme--on-primary">
+    <div class="mdc-switch crypto-rtl-switch-selector">
+      <div class="mdc-switch__track"></div>
+      <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+          <input type="checkbox" id="rtl-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
+        </div>
+      </div>
+    </div>
+    <label for="rtl-switch">RTL</label>
+  </div>
+  <!-- theme switch -->
+  <div class="switch-wrapper mdc-theme--on-primary">
+    <div class="mdc-switch crypto-theme-switch-selector">
+      <div class="mdc-switch__track"></div>
+      <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+          <input type="checkbox" id="crypto-theme-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
+        </div>
+      </div>
+    </div>
+    <label for="crypto-theme-switch">Switch theme</label>
+  </div>
+</div>
+
+
+    <!-- initialise material components js -->
+    <script src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
+    <script>mdc.autoInit()</script>
+    <!-- initialise marquee js -->
+    <script src="{{ url_for('static', path='/assets/js/marquee3k.js') }}"></script>
+    <script>Marquee3k.init()</script>
+    <!-- layout js -->
+    <script data-pace-options='{ "ajax": false, "restartOnRequestAfter": false }' src="{{ url_for('static', path='/assets/js/pace.min.js') }}"></script>
+    <script src="{{ url_for('static', path='/assets/js/apexcharts.min.js') }}"></script>
+    <!-- switcher js -->
+    <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
+    <!-- page specific JS -->
+    <script type="text/javascript" loading="lazy" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+  
+  <script src="{{ url_for('static', path='/assets/js/pages/index.js') }}"></script>
+  <script>
+        google.charts.load("current", {
+            packages: ["corechart", "line"]
+        });
+        google.charts.setOnLoadCallback(drawChart);
+        function drawChart() {
+              var data = null;
+              data = new google.visualization.DataTable();
+              data.addColumn('string', 'Date');
+              data.addColumn('number', 'Value');
+
+            let options = {
+                curveType: 'function',
+                series: {0: {color: '#e7711b' },},
+                color: '#d3362d',
+                title: "BTC/USD Price",
+                titleTextStyle: {
+                    color: 'white'
+                },
+                backgroundColor: {
+//                      fill:'#3c4752'
+			fill:'white'
+                },
+                hAxis: {
+//                  format: 'M/d/yy',
+                    format: 'hh:mm',
+                    gridlines: {count: 15},
+                    title: "Date",
+                    titleTextStyle: {
+                    color: '#F3F2F1'
+                    },
+                },
+                vAxis: {
+                    title: "Price",
+                    titleTextStyle: {
+                    color: '#F3F2F1'
+                    }
+                }
+            };
+            let chart = new google.visualization.LineChart(
+                document.getElementById("chart_div")
+            );
+	    chart.draw(data, options);
+            var ex = ['coinbase','gemini','kraken','bitstamp','bitfinex'];
+            for (i=0;i<ex.length;i++){
+		getPrice(ex[i]);
+            }
+            setInterval(function(){
+                $.ajax({
+                      url: 'proxy.php',
+                      dataType: 'json',
+                      cache: true,
+                      success: function(data1) {
+                        var data2 = JSON.parse('['+JSON.stringify(data1)+']');
+                        var arr = data2[0];
+//                        console.log(arr[0]);
+                        var b = arr[0];
+//                        console.log(b.close);
+                        data.addRow([b.datetime,b.close]);
+                        chart.draw(data, options);
+                      },
+                function (xhr, ajaxOptions, thrownError) {
+                      alert(xhr.status);
+                      alert(thrownError);
+		   }
+                });
+            },10000);
+        }
+
+	function getPrice(exchange){
+		console.log(exchange);
+		$.ajax({
+                      url: 'proxy.php?exchange='+exchange,
+                      dataType: 'json',
+                      cache: true,
+                      success: function(data) {
+                        var data2 = JSON.parse('['+JSON.stringify(data)+']');
+                        var arr = data2[0];
+                        console.log(arr[0]);
+                        var b = arr[0];
+                        console.log('Exchange:' + exchange + ' Price: ' + b.close);
+			$('#'+exchange).html(b.close);
+                      },
+                function (xhr, ajaxOptions, thrownError) {
+                      alert(xhr.status);
+                      alert(thrownError);
+                   }
+                });
+	}
+    </script>
+  </body>
 </html>
+

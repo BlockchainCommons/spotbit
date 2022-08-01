@@ -93,4 +93,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+__pycache__
+spotbit.log
+
 # End of https://www.gitignore.io/api/c

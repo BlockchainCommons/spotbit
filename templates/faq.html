@@ -9,7 +9,7 @@
     <!-- load Google fonts -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
     <!-- Crypto Styles -->
-    <link id="crypto-stylesheet" rel="stylesheet" href="assets/css/night-gold-orange.css">
+    <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
     <!-- page specific CSS -->
   </head>
 
@@ -18,12 +18,12 @@
     <div class="crypto-wrapper">
       <div class="crypto-sidenav">
         <nav class="crypto-navigation">
-        <a href="index.html" class="crypto-navigation__logo">
-	<img src="assets/images/bc.png" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+        <a href="/" class="crypto-navigation__logo">
+	<img src="{{ url_for('static', path='/assets/images/bc.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
   </a>
   <ul class="crypto-navigation__list">
       <li class="crypto-navigation__list-item mdc-ripple-surface ">
-        <a href="index.html">
+        <a href="/">
           <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
           
           <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
@@ -104,16 +104,16 @@
 
 
     <!-- initialise material components js -->
-    <script src="assets/js/material-components-web.min.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
     <script>mdc.autoInit()</script>
     <!-- initialise marquee js -->
-    <script src="assets/js/marquee3k.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/marquee3k.js') }}"></script>
     <script>Marquee3k.init()</script>
     <!-- layout js -->
-    <script data-pace-options='{ "ajax": false, "restartOnRequestAfter": false }' src="assets/js/pace.min.js"></script>
-    <script src="assets/js/apexcharts.min.js"></script>
+    <script data-pace-options='{ "ajax": false, "restartOnRequestAfter": false }' src="{{ url_for('static', path='/assets/js/pace.min.js') }}"></script>
+    <script src="{{ url_for('static', path='/assets/js/apexcharts.min.js') }}"></script>
     <!-- switcher js -->
-    <script src="assets/js/partials/switcher.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
     <!-- page specific JS -->
     
 <script>
