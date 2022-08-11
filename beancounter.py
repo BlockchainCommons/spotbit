@@ -20,8 +20,6 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 import requests
 
-import server as spotbit
-
 # bdk seems limited. Things I want to be able to do:
 # - generate a descriptor from an extended key.
 # - test if an address belongs to a HDkey
@@ -31,9 +29,54 @@ import server as spotbit
 
 import bdkpython as bdk
 
+from lib import Candle
+
 import logging
-# logger = logging.getLogger(__name__)
-logger = spotbit.logger
+
+def get_logger(verbose = False):
+
+    import logging
+    logger = logging.getLogger(__name__)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)s (thread %(thread)d):\t%(module)s.%(funcName)s: %(message)s')
+
+    handler  = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    import logging.handlers
+    handler = logging.handlers.RotatingFileHandler(
+            filename    = 'beancounter.log',
+            maxBytes    = 1 << 20,
+            backupCount = 2,
+            )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
+
+_logger = get_logger()
+
+@dataclass
+class Spotbit:
+    url: str
+
+    def get_candles_at_dates(self,
+            currency: str,
+            dates: list[datetime]):
+
+        result = None
+
+        request = f'{self.url}/api/history/{currency}'
+        body    = [dt.isoformat() for dt in dates]
+        response = requests.post(request, json = body)
+        if response.status_code == 200:
+            result = [Candle(**data) for data in response.json()]
+
+        return result
 
 def get_esplora_api(network: bdk.Network) -> str:
     ESPLORA_API_MAINNET = 'https://blockstream.info/api/'
@@ -47,7 +90,7 @@ def get_esplora_api(network: bdk.Network) -> str:
             result = ESPLORA_API_TESTNET
     return result
 
-_GAP_SIZE = 1000    # Make this configurable (set via command line)
+_GAP_SIZE = 1_000    
 
 Descriptor = str
 Address = str
@@ -55,7 +98,7 @@ Transactions = list[dict]
 
 async def get_transactions(
     addresses: list[Address],
-    network: bdk.Network
+    network:   bdk.Network
     ) -> dict[Address, Transactions]:
 
     result = []
@@ -102,7 +145,7 @@ async def get_transactions(
     def get_transactions_for(address: Address) -> dict[Address, Transactions]:
         # FIXME(nochiel) Don't include unconfirmed transactions.
 
-        # logger.debug(address)
+        # _logger.debug(address)
 
         result = {address: []}
 
@@ -115,22 +158,22 @@ async def get_transactions(
                 wait = 0
                 if response.status_code == 200: 
                     result[address] = response.json()
-                    # logger.debug(result)
+                    # _logger.debug(result)
                 else:
-                    logger.error(response.status_code)
-                    logger.error(response.text)
-                    logger.error(f'Using: {request}')
+                    _logger.error(response.status_code)
+                    _logger.error(response.text)
+                    _logger.error(f'Using: {request}')
                     raise HTTPException(status_code = response.status_code,
                                         detail = response.text)
 
             except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError) as e:
-                logger.debug(f'rate limited on address: {address}')
+                _logger.debug(f'rate limited on address: {address}')
                 wait *= 2
                 time.sleep(wait)
 
         return result
 
-    # logger.debug(f'Getting transactions for: {addresses[0]}')
+    # _logger.debug(f'Getting transactions for: {addresses[0]}')
     tasks = [asyncio.to_thread(get_transactions_for, address)
             for address in addresses]
 
@@ -139,7 +182,7 @@ async def get_transactions(
             for address_transactions in transactions_found
             for address, transactions in address_transactions.items() }
 
-    # logger.debug(f'result {result}')
+    # _logger.debug(f'result {result}')
     return result
 
 class TransactionDetails():
@@ -156,10 +199,9 @@ class TransactionDetails():
 
 TransactionDetailsForAddresses = dict[Address, list[TransactionDetails]] 
 async def make_transaction_details(
-        # addresses, 
         transactions: dict[Address, Transactions],
-        exchange, currency,
-        server = spotbit.app,
+        currency,
+        spotbit: Spotbit
         ) -> TransactionDetailsForAddresses:
 
     from statistics import mean
@@ -167,9 +209,9 @@ async def make_transaction_details(
     addresses = transactions.keys()
     result = {address: [] for address in addresses}
 
-    async def get_transaction_details_for(address: str, 
+    def get_transaction_details_for(address: str, 
             transactions: Transactions, 
-            server = server) -> TransactionDetailsForAddresses:
+            ) -> TransactionDetailsForAddresses:
 
         assert transactions 
 
@@ -180,14 +222,10 @@ async def make_transaction_details(
     
         assert len(timestamps_to_get)
 
-        from fastapi.testclient import TestClient
-        client = TestClient(server)
-
         candles = []
-
         try:
-            candles = await spotbit.get_candles_at_dates(
-                    exchange = exchange,
+            assert spotbit, 'The Spotbit client has not been initialised.'
+            candles = spotbit.get_candles_at_dates(
                     currency = currency,
                     dates = timestamps_to_get)
 
@@ -195,8 +233,9 @@ async def make_transaction_details(
             raise Exception(e.detail) from e
 
         if candles:
-            assert len(candles) == len(transactions), f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}'
-            logger.debug(f'candles: {candles}')
+            assert len(candles) == len(transactions), (
+                    f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}')
+            _logger.debug(f'candles: {candles}')
             for i in range(len(transactions)):
                 transaction = transactions[i]
                 inputs = transaction['vin']
@@ -221,9 +260,8 @@ async def make_transaction_details(
     tasks = []
     for address, transactions_for in transactions.items():
         if len(transactions_for):
-            # FIXME(nochiel) Make these multithreaded?
-            tasks.append(asyncio.create_task(get_transaction_details_for( 
-                address = address, transactions = transactions_for)))
+            tasks.append(asyncio.to_thread(get_transaction_details_for, 
+                address = address, transactions = transactions_for))
 
 
     if tasks:
@@ -238,7 +276,7 @@ async def make_transaction_details(
 def make_records(descriptor, *, 
         transaction_details: TransactionDetailsForAddresses, 
         transactions: dict[Address, Transactions],
-        currency: spotbit.CurrencyName
+        currency: str
         ) -> str:
 
     # Ref. https://beancount.github.io/docs/beancount_language_syntax.html
@@ -254,7 +292,7 @@ def make_records(descriptor, *,
     country             = ''
     institution         = ''
     btc_account_name    = 'BTC'
-    fiat_account_name   = currency.value 
+    fiat_account_name   = currency
     subaccount_name     = ''
 
     from beancount.core import account
@@ -277,7 +315,7 @@ def make_records(descriptor, *,
 
         result = datetime.now()
         txs = list(transactions.values())[0]
-        logger.debug(txs)
+        _logger.debug(txs)
         if txs[0]:
             result = datetime.fromtimestamp(txs[0]['status']['block_time'])
 
@@ -290,7 +328,7 @@ def make_records(descriptor, *,
         return result
 
     date_of_account_open = get_earliest_blocktime().date()
-    logger.debug(f'date_of_account_open: {date_of_account_open }')
+    _logger.debug(f'date_of_account_open: {date_of_account_open }')
 
     # Commodity directive
     '''
@@ -308,7 +346,7 @@ def make_records(descriptor, *,
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     account_directives = [
             f'{date_of_account_open} open {btc_account}\tBTC',
-            f'{date_of_account_open} open {fiat_account}\t{currency.value}',
+            f'{date_of_account_open} open {fiat_account}\t{currency}',
             ]
 
     transactions_by_hash = {tx['txid'] : tx 
@@ -356,7 +394,7 @@ def make_records(descriptor, *,
         return result
 
     assert transaction_details
-    # logger.debug(f'transaction_details: {transaction_details}')
+    # _logger.debug(f'transaction_details: {transaction_details}')
 
     transaction_directives = []
     addresses = transactions.keys()
@@ -398,11 +436,11 @@ def make_records(descriptor, *,
 
                     transaction_fiat_amount = detail.twap * payee.amount * 1e-8
                     if not detail.is_input:
-                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency.value} }}' 
+                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency} }}' 
                     if detail.is_input: 
-                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency.value}\t' 
+                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency}\t' 
                     fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                            + f'{transaction_fiat_amount : .2f} {currency.value}\t')
+                            + f'{transaction_fiat_amount : .2f} {currency}\t')
 
                     payee_transaction_directive = btc_payee_transaction_directive
                     payee_transaction_directive += '\n'
@@ -424,11 +462,11 @@ def make_records(descriptor, *,
     from beancount import loader
     _, errors, _ = loader.load_string(document)
     if errors:
-        logger.error(f'---{len(errors)} Errors in the generated beancount file---')
+        _logger.error(f'---{len(errors)} Errors in the generated beancount file---')
         for i, error in enumerate(errors):
-            logger.error(f'{i}: {error}')
-            logger.error('--')
-        logger.error('---End of errors in beancount file---')
+            _logger.error(f'{i}: {error}')
+            _logger.error('--')
+        _logger.error('---End of errors in beancount file---')
 
     return document
 
@@ -485,9 +523,9 @@ class Script(Token):
 
 async def make_beancount_file_for(
     descriptor: Descriptor, 
-    exchange, 
-    currency: spotbit.CurrencyName, 
-    network = bdk.Network.TESTNET):
+    currency:   str, 
+    network:    bdk.Network,
+    spotbit:    Spotbit):
 
     parsed_descriptor = ParsedDescriptor(descriptor)
 
@@ -513,10 +551,10 @@ async def make_beancount_file_for(
                 )
 
     except bdk.BdkError.Descriptor as e:
-        logger.error(e)
-        logger.debug('Parsing descriptor as multipath descriptor.')
+        _logger.error(f'Error creating wallet: {e}')
+        _logger.debug('Attempting to use descriptor as multipath descriptor.')
         assert parsed_descriptor.change_descriptor
-        logger.debug(f'Initialising wallet with:\n'
+        _logger.debug(f'Initialising wallet with:\n'
                      f'descriptor: {parsed_descriptor.external_descriptor}\n'
                      f'change_descriptor: {parsed_descriptor.change_descriptor}')
         wallet = bdk.Wallet(
@@ -528,22 +566,19 @@ async def make_beancount_file_for(
                 )
 
     assert wallet
-    logger.debug(f'wallet.balance: {wallet.get_balance()}')
-    logger.debug(f'wallet.transactions: {wallet.get_transactions()}')
+    _logger.debug(f'wallet.balance: {wallet.get_balance()}')
+    _logger.debug(f'wallet.transactions: {wallet.get_transactions()}')
 
-    # TODO(nochiel) Verify that all the addresses have been retrieved (including change addresses). 
-    # HD wallet address generation should just work. 
-    # FINDOUT(nochiel) How do I test with bdk if an address e.g. tb1qu06efjxlj3r880mlnnaz63euuv0cdklthjt87j belongs to this key?
     transactions = {}
     addresses = []
     addresses_to_check = [wallet.get_new_address() for _ in range(_GAP_SIZE)]
     while addresses_to_check:
-        logger.debug(f'Wallet addresses generated:\n\t' +
+        _logger.debug(f'Wallet addresses generated:\n\t' +
                     '\n\t'.join(addresses_to_check[:10]) + 
                     f'\n...{len(addresses_to_check[11:])} more...')
 
         transactions_to_check = await get_transactions(addresses_to_check, network)    
-        # logger.debug(f'transactions_to_check: {transactions_to_check }')
+        # _logger.debug(f'transactions_to_check: {transactions_to_check }')
         transactions_found = False
         for address, transactions_for in transactions_to_check.items():
             if transactions_for: transactions_found = True 
@@ -555,26 +590,26 @@ async def make_beancount_file_for(
         addresses.extend(addresses_to_check)
         addresses_to_check = [wallet.get_new_address() for _ in range(_GAP_SIZE)]
 
-    # logger.debug('---transactions--')
-    # logger.debug(transactions)
+    # _logger.debug('---transactions--')
+    # _logger.debug(transactions)
     number_of_transactions_found = sum([len(ts) for ts in transactions.values()])
-    logger.debug(f'Number of transactions found: {number_of_transactions_found }')
+    _logger.debug(f'Number of transactions found: {number_of_transactions_found }')
     if number_of_transactions_found  == 0:
-        logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
+        _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
         return
 
-    logger.debug('Making transaction details.')
+    _logger.debug('Making transaction details.')
     transaction_details = await make_transaction_details(
             transactions = transactions,
-            exchange = exchange,
-            currency = currency)
+            currency     = currency,
+            spotbit      = spotbit)
 
     if not transaction_details:
         raise Exception('No transaction details')
 
-    # logger.debug(f'transaction_details: {transaction_details}')
+    # _logger.debug(f'transaction_details: {transaction_details}')
 
-    logger.debug('Making beancount file.')
+    _logger.debug('Making beancount file.')
     beancount_document = make_records(descriptor, 
             transaction_details = transaction_details, 
             transactions        = transactions,
@@ -583,13 +618,13 @@ async def make_beancount_file_for(
     if not beancount_document:
         raise Exception('The beancountfile was not generated')
 
-    logger.debug('Writing beancount file.')
+    _logger.debug('Writing beancount file.')
     if beancount_document:
         from beancount.scripts import format
         formatted_document = format.align_beancount(beancount_document)
         filename  = format_filename(parsed_descriptor)   # TODO(nochiel)
         assert filename
-        logger.info(f'Writing beancount report to: {filename}')
+        _logger.info(f'Writing beancount report to: {filename}')
         with open(filename, mode = 'w') as file:
             file.write(formatted_document)
 
@@ -643,7 +678,7 @@ class ParsedDescriptor:
         Given a descriptor (maybe with a multipath template), 
         parse it out into (descriptor, change_descriptor) pair.
         '''
-        logger.debug(f'descriptor: {descriptor}')
+        _logger.debug(f'descriptor: {descriptor}')
 
         def parse_keys(data: str) -> list[Key]:
             # Assumption: data has one key.
@@ -684,7 +719,7 @@ class ParsedDescriptor:
                 else:
                     result.append(Key(self.fingerprint, paths))
 
-            # logger.info(f'>>> parse_key: {result}')
+            # _logger.info(f'>>> parse_key: {result}')
             return result
 
         def parse_script(
@@ -693,7 +728,7 @@ class ParsedDescriptor:
             ) -> list[Script]:
             # TODO(nochiel) Parse 'multi' and 'sortedmulti' script keys.
             # TODO(nochiel) Parse 'tr' keys.
-            # logger.debug(f'parse_script: {script}')
+            # _logger.debug(f'parse_script: {script}')
 
             result          = []
             script_start    = 0
@@ -712,8 +747,8 @@ class ParsedDescriptor:
                 result = [Script(ScriptType[script_type], script)
                     for script in parse_script(inner_script)]
 
-            # logger.debug(f'>>> parse_script: {result}')
-            # logger.debug('---')
+            # _logger.debug(f'>>> parse_script: {result}')
+            # _logger.debug('---')
 
             return result
 
@@ -803,23 +838,50 @@ def format_filename(descriptor: ParsedDescriptor) -> str:
 
     return result
 
+if __name__ == '__main__':
+    
+    import typer
 
-def make_beancount_from_descriptor(descriptor: Descriptor, exchange, currency, network = bdk.Network.BITCOIN):
+    from lib import Network
 
-    def init():
-        assert logger
-        logger.debug('starting')
-        logger.debug(f'_GAP_SIZE: {_GAP_SIZE}')
+    def beancount(
+            spotbit_url: str,
+            descriptor:  Descriptor,
+            network:     Network = Network.TESTNET.value,
+            currency:    str = 'USD',
+            verbose:     bool = False):
+        '''
+        Generate a beancount file using the transactions found by generating addresses from the bitcoin mainnet descriptor.
 
-    init()
+        Ref. https://beancount.github.io/docs/trading_with_beancount.html
+        '''
 
-    # FIXME Given an xpub make sure change addresses are also generated.
-    # Take _GAP_SIZE depth. Generate 1 key at each depth. 
-    # Store each path for which the first key has a transaction.
-    # Stop enumerating keys as soon as a transaction is not found at a given depth. 
-    # For each valid path, generate _GAP_SIZE keys. Filter out all keys for which there are no transactions.
-    # FINDOUT How do I ensure bdk does this automatically? 
-    # FINDOUT How does Electrum get all the relevant descriptors when given an xpub? Depth search?
+        _logger = get_logger(verbose)
+        assert _logger
 
-    asyncio.run(make_beancount_file_for(descriptor, exchange, currency, network))
+        typer.echo(f'Generating beancount report for descriptor: {descriptor}')
+        typer.echo(f'Using currency: {currency}')
+
+        spotbit = Spotbit(spotbit_url)
+        import bdkpython as bdk
+        bdk_network = bdk.Network[network.value.upper()]
+
+        try:
+           _logger.debug('Starting')
+           _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
+           result = asyncio.run(
+                   make_beancount_file_for(descriptor, currency, bdk_network, spotbit), 
+                   # debug = True
+                   )
+           result = result.result() if result else None
+        except Exception as e:
+           typer.echo(f'An error occurred while generating a beancount file: {e}')
+
+
+    typer.run(beancount)
+
+
+
+
+
 
