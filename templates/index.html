@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -18,10 +17,10 @@
             align-items: center;
         }
     </style>
-    <!-- <base href="/spotbit/"> -->
+    <base href="/spotbit/">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
-    <!-- <link id="crypto-stylesheet" rel="stylesheet" href="assets/css/night-gold-orange.css"> -->
-    <link href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}" rel="stylesheet">
+    <!-- Crypto Styles -->
+    <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
   </head>
 
   <body class="mdc-typography pace-on mdc-theme--background crypro-theme-gradient">
@@ -32,7 +31,7 @@
         <nav class="crypto-navigation">
   <a href="/" class="crypto-navigation__logo">
     <!-- Image element or even SVG can be used here -->
-    <img src="{{ url_for('static', path='/assets/images/bc.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+    <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
   </a>
   <ul class="crypto-navigation__list">
       <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
@@ -55,7 +54,7 @@
       </li>
   </ul>
   <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
-	  <img src="{{ url_for('static', path='/assets/images/bc.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+	  <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
    </a>
 	</nav>
 
@@ -134,7 +133,7 @@
             </div>
           </div>
           <div class="crypto-widget__content">
-<!--            <div id="wallets-performance-chart"></div>-->
+           <div id="wallets-performance-chart"></div>
 		<div id="chart_div"></div>				
           </div>
         </div>
