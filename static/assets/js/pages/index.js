@@ -387,7 +387,7 @@ JEV       data: [coinCurrentPrices[activeCoinIndex]]
     }
   });
 
-// //TODO:FIND INTENDED MARKUP
+// //TODO:MISSING HTML MARKUP
 //   const menuEl = document.querySelector('#widget-menu');
 //   const menu = new mdc.menu.MDCMenu(menuEl);
 //   const menuButtonEl = document.querySelector('#menu-button');

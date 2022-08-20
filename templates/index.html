@@ -10,6 +10,9 @@
             width: 800px;
             height: 400px;
         }
+        noscript {
+          padding-top: 20px;
+        }
 
         body {
             display: flex;
@@ -18,14 +21,14 @@
         }
     </style>
     <base href="/spotbit/">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
     <!-- Crypto Styles -->
     <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
   </head>
 
-  <body class="mdc-typography pace-on mdc-theme--background crypro-theme-gradient">
+  <body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
 
-    <div class="crypto-loader"></div>
     <div class="crypto-wrapper">
       <div class="crypto-sidenav">
         <nav class="crypto-navigation">
@@ -36,7 +39,7 @@
   <ul class="crypto-navigation__list">
       <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
         <a href="#">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">home</i>
           <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
             Main 
           </span>
@@ -46,7 +49,7 @@
   <ul class="crypto-navigation__list">
       <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
         <a href="/faq">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
           <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
             FAQ 
           </span>
@@ -134,7 +137,9 @@
           </div>
           <div class="crypto-widget__content">
            <div id="wallets-performance-chart"></div>
-		<div id="chart_div"></div>				
+		<div id="chart_div">
+      <noscript >Enable JavaScript to see live Updates</noscript>
+    </div>				
           </div>
         </div>
         <div class="crypto-widget">
@@ -493,6 +498,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
   
   <script src="{{ url_for('static', path='/assets/js/pages/index.js') }}"></script>
+  
   <script>
         google.charts.load("current", {
             packages: ["corechart", "line"]
