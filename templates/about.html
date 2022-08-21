@@ -17,36 +17,36 @@
   <body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
  
     <div class="crypto-wrapper">
-      <div class="crypto-sidenav">
-        <nav class="crypto-navigation">
-  <a href="/" class="crypto-navigation__logo">
-    <!-- Image element or even SVG can be used here -->
-    <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-  </a>
-  <ul class="crypto-navigation__list">
-      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-        <a href="/about">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
-          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            ABOUT
-          </span>
-        </a>
-      </li>
-  </ul>
-  <ul class="crypto-navigation__list">
-      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-        <a href="/faq">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
-          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            FAQ
-          </span>
-        </a>
-      </li>
-  </ul>
-  <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
-	  <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-   </a>
-	</nav>
+        <div class="crypto-sidenav">
+          <nav class="crypto-navigation">
+    <a href="/" class="crypto-navigation__logo">
+      <!-- Image element or even SVG can be used here -->
+      <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+    </a>
+    <ul class="crypto-navigation__list">
+        <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+          <a href="/about">
+            <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
+            <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+              ABOUT
+            </span>
+          </a>
+        </li>
+    </ul>
+    <ul class="crypto-navigation__list">
+        <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+          <a href="/faq">
+            <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
+            <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+              FAQ
+            </span>
+          </a>
+        </li>
+    </ul>
+    <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
+        <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+     </a>
+      </nav>
       </div>
       <main class="crypto-main">
         <div class="crypto-main__content mdc-theme--text-primary-on-background">
@@ -56,17 +56,23 @@
       <div class="mdc-layout-grid__cell--span-10-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
         <div class="crypto-widget crypto-widget--margin-bottom">
           <h2 class="crypto-widget__heading crypto-widget__heading--fullwidth mdc-typography--headline6 mdc-theme--primary">
-            <span class="crypto-widget__heading-text">FAQ</span>
+            <span class="crypto-widget__heading-text">ABOUT</span>
             <span class="crypto-widget__heading-border"></span>
           </h2>
           <div class="crypto-widget__content">
-            <p class="mdc-typography--body1">Frequently Asked Questions</p>
-            <ul class="crypto-list mdc-typography--body1">
-              <li><strong>Where are the available onion addresses for SpotBit?</strong> h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion </li>
-              <li><strong>How are fiat currency values averaged?</strong> For each of the listed fiat currencies, there is a list of five exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of the `spotbit.config` in order to ensure SpotBit runs as smoothly as possible. The default config will include these values for you.</li>
-              <li><strong>How does the SpotBit web page work?</strong> The web page loads JSON data exposed by Spotbit every 15 seconds. It uses AJAX calls to load data and the Charts API to draw the chart.</li>
-              <li><strong>Can SpotBit be used with WebSockets?</strong> The web page can be used with WebSockets when Spotbit returns data using that option.</li>
-            </ul>
+            <p class="mdc-typography--body1">
+                <div class="crypto-widget__content">
+                    <div class="crypto-wallet-overview">
+                           <div>Spotbit is a portable FastAPI for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor. It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep
+                            <div>Contribute to Spotbit on <a href="https://github.com/BlockchainCommons/spotbit">Github</a> or by <a href="https://github.com/sponsors/BlockchainCommons">sponsoring</a> on Github as well.  
+
+                            </p>
+                          </div>
+        
+                    </div>
+                </div>
+            </p>
+            
           </div>
         </div>
 	 </div>

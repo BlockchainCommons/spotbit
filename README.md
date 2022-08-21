@@ -59,6 +59,33 @@ Late 2020
 Late 2020/ Early 2021
 * Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
 
+## Development setup
+
+Requirements
+
++ Python3.10+
++ Nodejs
+
+Create a virtual environment
+```
+python -m venv env/
+```
+
+Activate virtual environment
+```
+source env/bin/activate
+```
+
+Install dependencies
+```
+python -m pip install -r requirements.txt
+```
+
+Run
+```
+python app.py run
+```
+
 ## Installation Instructions
 
 The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
