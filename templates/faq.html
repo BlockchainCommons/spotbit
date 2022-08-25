@@ -9,6 +9,12 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
     <!-- load Google fonts -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
+    <!--Material Components-->
+    <link
+    href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css"
+    rel="stylesheet"
+  />
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <!-- Crypto Styles -->
     <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
     <!-- page specific CSS -->
@@ -112,15 +118,14 @@
     <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
     <script>mdc.autoInit()</script>
     <!-- initialise marquee js -->
-    <script src="{{ url_for('static', path='/assets/js/marquee3k.js') }}"></script>
-    <script>Marquee3k.init()</script>
-    <!-- layout js -->
-    <script data-pace-options='{ "ajax": false, "restartOnRequestAfter": false }' src="{{ url_for('static', path='/assets/js/pace.min.js') }}"></script>
-    <script src="{{ url_for('static', path='/assets/js/apexcharts.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marquee3000@1.1.1/marquee3k.min.js"></script>
+    <script>
+      Marquee3k.init();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <!-- switcher js -->
     <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
     <!-- page specific JS -->
-    <script src="{{ url_for('static', path='/assets/js/requests.js') }}"></script>
     
 <script>
   (function() {
