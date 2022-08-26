@@ -387,20 +387,20 @@ JEV       data: [coinCurrentPrices[activeCoinIndex]]
     }
   });
 
+// //TODO:MISSING HTML MARKUP
+//   const menuEl = document.querySelector('#widget-menu');
+//   const menu = new mdc.menu.MDCMenu(menuEl);
+//   const menuButtonEl = document.querySelector('#menu-button');
+//   menuButtonEl.addEventListener('click', function() {
+//     menu.open = !menu.open;
+//   });
+//   menu.setAnchorMargin({left: -60});
 
-  const menuEl = document.querySelector('#widget-menu');
-  const menu = new mdc.menu.MDCMenu(menuEl);
-  const menuButtonEl = document.querySelector('#menu-button');
-  menuButtonEl.addEventListener('click', function() {
-    menu.open = !menu.open;
-  });
-  menu.setAnchorMargin({left: -60});
-
-  // Wallet
-  const newWalletDialog = new mdc.dialog.MDCDialog(document.querySelector('.mdc-dialog'));
-  document.querySelector('.crypto-wallet--new').addEventListener('click', function(evt) {
-    newWalletDialog.lastFocusedTarget = evt.target;
-    newWalletDialog.show();
-  });
+  // // Wallet
+  // const newWalletDialog = new mdc.dialog.MDCDialog(document.querySelector('.mdc-dialog'));
+  // document.querySelector('.crypto-wallet--new').addEventListener('click', function(evt) {
+  //   newWalletDialog.lastFocusedTarget = evt.target;
+  //   newWalletDialog.show();
+  // });
 
 })();

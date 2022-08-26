@@ -7,7 +7,7 @@
 
 Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
 
-**Spotbit** is a portable Flask API for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor.  It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
+**Spotbit** is a portable FastAPI for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor.  It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
 
 Users may choose to run their own local **Spotbit** server, or simply to connect to another user's existing service. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with Spotbit far more secure than other price data services thanks to its anti-correlation features.
 
@@ -58,6 +58,33 @@ Late 2020
 
 Late 2020/ Early 2021
 * Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
+
+## Development setup
+
+Requirements
+
++ Python3.10+
++ Nodejs
+
+Create a virtual environment
+```
+python -m venv env/
+```
+
+Activate virtual environment
+```
+source env/bin/activate
+```
+
+Install dependencies
+```
+python -m pip install -r requirements.txt
+```
+
+Run
+```
+python app.py run
+```
 
 ## Installation Instructions
 

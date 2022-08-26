@@ -4,44 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Material Design HTML Template</title>
+    <title>Spotbit|FAQ</title>
     <base href="/spotbit/">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
     <!-- load Google fonts -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
+    <!--Material Components-->
+    <link
+    href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css"
+    rel="stylesheet"
+  />
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <!-- Crypto Styles -->
-    <link id="crypto-stylesheet" rel="stylesheet" href="assets/css/night-gold-orange.css">
+    <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
     <!-- page specific CSS -->
   </head>
 
-  <body class="mdc-typography pace-on mdc-theme--background crypro-theme-gradient">
-    <div class="crypto-loader"></div>
+  <body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
+ 
     <div class="crypto-wrapper">
       <div class="crypto-sidenav">
         <nav class="crypto-navigation">
-        <a href="index.html" class="crypto-navigation__logo">
-	<img src="assets/images/bc.png" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+  <a href="/" class="crypto-navigation__logo">
+    <!-- Image element or even SVG can be used here -->
+    <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
   </a>
   <ul class="crypto-navigation__list">
-      <li class="crypto-navigation__list-item mdc-ripple-surface ">
-        <a href="index.html">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">timeline</i>
-          
+      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+        <a href="/about">
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
           <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            Main 
-          </span>
-        </a>
-      </li>
-      <li class="crypto-navigation__list-item mdc-ripple-surface ">
-        <a href="faq.html">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">account_balance_wallet</i>
-            <span class="crypto-navigation__list-item__badge"></span>
-           <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            FAQ 
+            ABOUT
           </span>
         </a>
       </li>
   </ul>
-</nav>
+  <ul class="crypto-navigation__list">
+      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+        <a href="/faq">
+          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
+          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+            FAQ
+          </span>
+        </a>
+      </li>
+  </ul>
+  <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
+	  <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
+   </a>
+	</nav>
       </div>
       <main class="crypto-main">
         <div class="crypto-main__content mdc-theme--text-primary-on-background">
@@ -104,16 +115,16 @@
 
 
     <!-- initialise material components js -->
-    <script src="assets/js/material-components-web.min.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
     <script>mdc.autoInit()</script>
     <!-- initialise marquee js -->
-    <script src="assets/js/marquee3k.js"></script>
-    <script>Marquee3k.init()</script>
-    <!-- layout js -->
-    <script data-pace-options='{ "ajax": false, "restartOnRequestAfter": false }' src="assets/js/pace.min.js"></script>
-    <script src="assets/js/apexcharts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marquee3000@1.1.1/marquee3k.min.js"></script>
+    <script>
+      Marquee3k.init();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <!-- switcher js -->
-    <script src="assets/js/partials/switcher.js"></script>
+    <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
     <!-- page specific JS -->
     
 <script>
@@ -126,27 +137,29 @@
         linearProgress.buffer = 0.75;
       }
     }
-    // Tabs example.
-    new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
 
-    // Checkbox
-    document.getElementById('basic-indeterminate-checkbox').indeterminate = true;
+    // // //TODO:MISSING HTML MARKUP
+    // // Tabs example.
+    // new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
 
-    // Textfields
-    const tfRoot = document.querySelectorAll('.mdc-text-field');
-    for (let i = 0; i < tfRoot.length; i++) {
-      new mdc.textField.MDCTextField(tfRoot[i]);
-    }
+    // // Checkbox
+    // document.getElementById('basic-indeterminate-checkbox').indeterminate = true;
 
-    // Select
-    new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
+    // // Textfields
+    // const tfRoot = document.querySelectorAll('.mdc-text-field');
+    // for (let i = 0; i < tfRoot.length; i++) {
+    //   new mdc.textField.MDCTextField(tfRoot[i]);
+    // }
 
-    // Slider
-    const MDCSlider = mdc.slider.MDCSlider;
-    const elements = document.querySelectorAll('.mdc-slider');
-    for (let i = 0; i < elements.length; i++) {
-      new MDCSlider(elements[i]);
-    }
+    // // Select
+    // new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
+
+    // // Slider
+    // const MDCSlider = mdc.slider.MDCSlider;
+    // const elements = document.querySelectorAll('.mdc-slider');
+    // for (let i = 0; i < elements.length; i++) {
+    //   new MDCSlider(elements[i]);
+    // }
   })();
 </script>
   </body>
