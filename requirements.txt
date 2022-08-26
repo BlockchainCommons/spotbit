@@ -39,7 +39,7 @@ Jinja2==3.0.3
 lazy-object-proxy==1.7.1
 lxml==4.9.1
 MarkupSafe==2.1.0
-mccabe==0.6.1
+mccabe==0.7.0
 multidict==6.0.2
 nodeenv==1.6.0
 packaging==21.3
