@@ -59,6 +59,33 @@ Ongoing maintenance and features are listed in the repository's "issues" page.
 - [x] Late 2020: Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
 - 2021 - : Ongoing maintenance and features are listed in the repository's "issues" page.
 
+## Development setup
+
+Requirements
+
++ Python3.10+
++ Nodejs
+
+Create a virtual environment
+```
+python -m venv env/
+```
+
+Activate virtual environment
+```
+source env/bin/activate
+```
+
+Install dependencies
+```
+python -m pip install -r requirements.txt
+```
+
+Run
+```
+python app.py run
+```
+
 ## Installation Instructions
 
 Spotbit includes a script called `installSpotbit.sh` which installs Spotbit and configures Tor on a Debian-based linux system. 
