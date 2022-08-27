@@ -58,6 +58,7 @@ pyparsing==3.0.7
 pytest==7.1.1
 python-dateutil==2.8.2
 python-dotenv==0.19.2
+random-username==1.0.2
 requests==2.27.1
 rsa==4.8
 setuptools==60.9.3

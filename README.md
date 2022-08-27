@@ -5,32 +5,38 @@
 * <img src="https://raw.githubusercontent.com/BlockchainCommons/torgap/master/images/logos/torgap.png" width=30 valign="bottom"> ***uses [torgap](https://github.com/BlockchainCommons/torgap/blob/master/README.md) technology***
 ![](images/logos/spotbit-screen.jpg)
 
-Price info services have long been the biggest privacy hole in Bitcoin. Though Bitcoin Core can run using Tor, and though new wallets like the [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) can communicate with Bitcoin Core through Tor, Bitcoin price services did not, creating a potential red flag in a state that is antagonistic toward Bitcoin. **Spotbit** is the answer.
+Price feeds for Bitcoin can be a privacy hole when wallets, users, or automated tools access them without using Tor or a secure proxy. If a user's wallets or tools access a preconfigured price feed, the user is potentially vulnerable to [Sybil attacks](https://en.wikipedia.org/wiki/Sybil_attack). **Spotbit's** purpose is to allow users to access price feeds in a customisable way that preserves privacy and mitigate the reliance on a single source of data.
 
-**Spotbit** is a portable FastAPI for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor.  It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep.
+**Spotbit** is a portable API for Bitcoin price data and candles. It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It is configurable so that the user can decide which base currencies to use (USDT, USD, EUR etc), and which exchanges to use for price data.
 
-Users may choose to run their own local **Spotbit** server, or simply to connect to another user's existing service. Even if one does not host their own Spotbit node, the use of Tor V3 makes interacting with Spotbit far more secure than other price data services thanks to its anti-correlation features.
+Users may choose to run their own local **Spotbit** server, or to connect to a hosted **Spotbit** service.
 
-**Why Use Spotbit?**
+#### Why Use Spotbit?
 
 1. **Privacy.** Spotbit can work as a Tor hidden service.
 1. **Reliability.** Spotbit aggregrates information using the exchanges/sources you configure, making your pricing data more trustworthy.
 1. **Self-sovereignty.** Spotbit can run from your server. 
 
+### Features
+
+- Fetch Bitcoin prices from a set of exchanges.(See the API documentation [here](http://tmb6kcuihnpfyrxfsjgtvasthenvr43n6pcjhyml6fprgyzydvf5atyd.onion/docs))
+- Produce a beancount report of the transactions associated with a Bitcoin descriptor.
+- Web front-end with price data visualisation.  
+
 ## Additional Information
 
-* At this stage, Spotbit relies on the CCXT library for API calls. In the future, some exchanges will have websocket support as well, to increase the amount and accuracy of the data recieved.
+* Spotbit depends on the [CCXT](https://github.com/ccxt/ccxt) which provides an abstraction for API access to cryptocurrency exchanges.
 
 ### Test Server
-A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated server.
+A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated Blockchain Commons server.
 
 ### Related Projects
 
-Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability, and self-sovereignty advantages. It works particularly well with the [Gordian system](https://github.com/BlockchainCommons/Gordian), which supports Tor connections between a [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) and a [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS) or other server installed by [Bitcoin Standup scripts](https://github.com/BlockchainCommons/Bitcoin-StandUp-Scripts).
+Spotbit is intended for integration with the [Gordian system](https://github.com/BlockchainCommons/Gordian), which consists of Tor-gapped components such as [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS) and a [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS) or other server installed by [Bitcoin Standup scripts](https://github.com/BlockchainCommons/Bitcoin-StandUp-Scripts).
 
 ## Gordian Principles
 
-Spotbit is an example of a microservices meant to display how the [Gordian Principles](https://github.com/BlockchainCommons/Gordian#gordian-principles), which are philosophical and technical underpinnings to Blockchain Commons' Gordian technology, are supported by the Gordian Architecture. This includes:
+Spotbit is a microservice intended to help realise the [Gordian Principles](https://github.com/BlockchainCommons/Gordian#gordian-principles) underpinning Blockchain Commons' Gordian technology stack and the Gordian Architecture. These principles are:
 
 * **Independence.** Users can choose which applications to use within an open ecosystem.
 * **Privacy.** Airgaps provide data with strong protection, while torgaps do the same for networked interactions.
@@ -44,20 +50,14 @@ Blockchain Commons apps do not phone home and do not run ads. Some are available
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
 ### Roadmap
-June 2020
-* Completion of research and planning.
 
-August 2020
-* Completed first working setup, began alpha testing.
+Ongoing maintenance and features are listed in the repository's "issues" page.
 
-September 2020
-* Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
-
-Late 2020
-* Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
-
-Late 2020/ Early 2021
-* Support data sharing between spotbit nodes for quicker requests and data validation, enter beta testing phase.
+- [x] June 2020: Completion of research and planning.
+- [x] August 2020: Completed first working setup, began alpha testing.
+- [x] September 2020: Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
+- [x] Late 2020: Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
+- 2021 - : Ongoing maintenance and features are listed in the repository's "issues" page.
 
 ## Development setup
 
@@ -88,128 +88,30 @@ python app.py run
 
 ## Installation Instructions
 
-The latest version of Spotbit includes a script called `install.sh` for installing Spotbit and configuring Tor on the system. Run `chmod +x install.sh` inside the Spotbit directory before running the script. 
-```
+Spotbit includes a script called `installSpotbit.sh` which installs Spotbit and configures Tor on a Debian-based linux system. 
+
+```console
 $ git clone https://github.com/BlockchainCommons/spotbit.git
 $ cd spotbit
 $ chmod +x installSpotbit.sh
-```
-
-`installSpotbit.sh` will set up your system to run spotbit. It must be run inside a shell as a root:
-```
 $ sudo -s source ./installSpotbit.sh 
 ```
 
-
-First, the script checks if Python3.8 is being used on your system. Many Linux distributions use an older version of python by default that will need to be upgraded. The installer will download, compile, and install python3.8 for you.
-
-Then, the installer will install the required python3 libraries via pip. These are `ccxt` and `flask`. 
-
-After that, the installer will install and setup tor on your system, then create a user named `spotbit` that controls the hidden service directory location at `/var/lib/tor/spotbit`. The source code will be copied to `/home/spotbit/source`, and the config file will be copied to `/home/spotbit/.spotbit/spotbit.config`. This is the location where configuration settings will be read from when `spotbit` runs. Finally, a `systemd` service will be copied to `/etc/systemd/system`. 
-
-The install script will set up a hidden service for you, then show you the link after creating it. You can view this link anytime by looking at the file `/var/lib/tor/spotbit/hostname` as root. You do not need to use Spotbit over tor. 
-
-> :information_source: **NOTE:** you do not need to specify the port number in the address bar if you are using Tor. 
+The installer will: 
+- Install and setup tor on your system, 
+- Create a user named `spotbit` in a `spotbit` group that controls the hidden service directory location at `/var/lib/tor/spotbit`. 
+- Copy Spotbit sourcecode to `/home/spotbit/source`
+    - The user should update the default `spotbit.config` with their desired configuration.
+- Create a `systemd` service unit file in `/etc/systemd/system`. 
+- Set up a Tor hidden service for Spotbit. 
 
 ## Usage Instructions
 
-To run the server, run `sudo systemctl start spotbit`. Spotbit will then start making http GET requests to all the exchanges you list in the config file. Over 100 exchanges are supported, though the default setup uses fewer. 
-
-The Flask server runs over port 5000. The following API routes can be used via that port:
-
-* `/status`
-    - Returns a string message if the server is running
-* `/now/<currency>/<exchange>`
-    - Returns the latest candle for BTC/currency (if supported by the exchange API), or the latest spot price. 
-    - currency is a three letter fiat currency (e.g. USD, JPY, etc)
-    - exchange is the name of an exchange supported by CCXT. It is used if Spotbit is configured to use the exchange. If the exchange is not supported, then Spotbit will return an error.
-    - Example response:
-    ```
-    {"close":10314.06,"currency_pair":"BTC-USD","datetime":"2020-09-13 14:31:00","high":10315.65,"id":122983,"low":10314.06,"open":10315.65,"timestamp":1600007460000,"vol":3.53308926}
-    ```
-* `/now/<currency>`
-    - Similar to above, but when the user does not specify a specific exchange (e.g. `/now/USD`)
-    - Spotbit will return an average value of the latest data from each exchange in the list. All values will be no older than 1 hour from present.
-    - If no data are present for any exchange, then spotbit will try to make a direct request to that exchange. If that fails, then that exchange will be excluded from the average value.
-    - In the response json, there will be a list called `failed_exchanges` showing which exchanges had to be excluded.
-    - Example response:
-    ```
-    {"close":10320.4375,"currency_pair":"BTC-USD","datetime":"Sun, 13 Sep 2020 14:39:11 GMT","exchanges":["coinbasepro","hitbtc","bitfinex","kraken","bitstamp"],"failed_exchanges":["hitbtc"],"high":10321.0875,"id":"average_value","low":10319.3175,"oldest_timestamp":1600007460000,"open":10320.0875,"timestamp":1600007951358.4841,"volume":2.3988248000000003}
-    ```
-
-* `/hist/<currency>/<exchange>/<date_start>/<date_end>`
-    - Returns all data in the specified BTC/currency pair between `date_start` and `date_end`.
-    - Dates can be passed either as ISO-8601 dates (YYYY-MM-DDTHH:mm:SS) or millisecond timestamps.
-    - If the exchange is not present in your config file, then no data is returned.
-    - Example response:
-    ```
-    {"columns":["id","timestamp","datetime","currency_pair","open","high","low","close","vol"],"data":[[718,1600804380000,"2020-09-22 12:53:00","BTC-USD",10479.3,10483.3,10479.2,10483.3,17.4109874],[719,1600804440000,"2020-09-22 12:54:00","BTC-USD",10483.3,10483.4,10483.3,10483.4,0.098285],[720,1600804500000,"2020-09-22 12:55:00","BTC-USD",10483.4,10483.4,10483.4,10483.4,0.0]]}
-```
-```
-
-* `/configure`
-    - Shows the current config settings for this server, including what exchanges and currencies are supported.
-    - Example response:
-    ```
-    {"cached exchanges":["gemini","bitstamp","okcoin","coinbasepro","kraken","cex","bitfinex","acx","bitflyer","liquid","bitbank","zaif"],"currencies":["USD","GBP","JPY","AUD","USDT","BRL","EUR","KRW","ZAR","TRY","USDC","INR","CAD","IDR"],"interval":5,"keepWeeks":5,"on demand exchanges":["acx","aofex","bequant","bibox","bigone","binance","bitbank","bitbay","bitfinex","bitflyer","bitforex","bithumb","bitkk","bitmax","bitstamp","bittrex","bitz","bl3p","bleutrade","braziliex","btcalpha","btcbox","btcmarkets","btctradeua","bw","bybit","bytetrade","cex","chilebit","coinbase","coinbasepro","coincheck","coinegg","coinex","coinfalcon","coinfloor","coinmate","coinone","crex24","currencycom","digifinex","dsx","eterbase","exmo","exx","foxbit","ftx","gateio","gemini","hbtc","hitbtc","hollaex","huobipro","ice3x","independentreserve","indodax","itbit","kraken","kucoin","lakebtc","latoken","lbank","liquid","livecoin","luno","lykke","mercado","oceanex","okcoin","okex","paymium","poloniex","probit","southxchange","stex","surbitcoin","therock","tidebit","tidex","upbit","vbtc","wavesexchange","whitebit","yobit","zaif","zb"],"updated settings?":"no"}
-    ```
-* `/`
-    - Shows a landing page with info about spotbit.
+To run the server, run `sudo systemctl start spotbit`. 
 
 You can check on a spotbit's status at any time by running `sudo systemctl status spotbit`, or take a look at the log file in `/home/spotbit/source/spotbit.log`. 
 
-### Config Options
-
-Spotbbit uses a config file located at `/home/spotbit/.spotbit/spotbit.config` to store settings. The allowed fields are:
-
-* `exchanges`
-    - The exchanges you want to get current data for. They should be supplied as a list of lowercase names separated by spaces. By default, spotbit.config will include the exchanges needed to create averages for you in USD, GBP, EUR, JPY and USDT.
-* `currencies`
-    - The fiat currencies you want to get data for. They should be supplied as a list of currency codes (eg USD, AUD, CAD, etc) separated by spaces
-* `interval`
-    - The time in seconds spotbit should wait between making GET requests to API servers. This value should be between 5-15 seconds for best results.
-* `exchange_limit`
-    - The number of exchanges that can be run in one thread, before performance mode is turned on and spotbit distributes exchanges to multiple threads. Increase the threshold  if you want to reduce Spotbit's impact on your system, and lower the threshold if you want Spotbit to run as fast as possible with many exchanges supported. THE MULTITHREADING IS STILL POORLY TESTED AND MAY NOT BEHAVE PROPERLY. OMITTING THIS IS PREFERRED.
-* `averaging_time`
-    - The time window in hours that Spotbit will consider "current" when calculating an average price. It is useful to set this to at least an hour or so if you are supporting several dozen or more exchanges, because in these situations some exchanges may occasionally fall slightly behind in the request queue, depending on what you have set as your `interval` and `exchange_limit`.
-* `historicalExchanges`
-    - Exchanges that you want to request past data for in addition to current data. Should be supplied in the same format as the `exchanges` field.
-* `historyEnd`
-    - A millisecond timestamp that represents the oldest point in history you want to keep in storage.
-    
-### Exchanges Used for Averaging
-
-For each of the listed fiat currencies, there is a list of five exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of `spotbit.config` in order to ensure spotbit runs as smoothly as possible. The default config will include these values for you.
-* USD
-    - coinbasepro
-    - hitbtc
-    - bitfinex
-    - kraken
-    - bitstamp
-* GBP
-    - coinbasepro
-    - coinsbank
-    - bitstamp
-    - kraken
-    - cexio
-* EUR
-    - kraken
-    - coinbasepro
-    - bitfinex
-    - bitstamp
-    - indoex
-* JPY
-    - bitflyer
-    - liquid
-    - coincheck
-    - bitbank
-    - zaif
-* USDT
-    - binance
-    - okex
-    - huobipro
-    - bitmax
-    - gateio
+The Spotbit API schema can be found by browsing to: <http://localhost:5000/docs>
 
 ## Origin, Authors, Copyright & Licenses
 

@@ -4,7 +4,6 @@
 import asyncio
 from datetime import datetime, timedelta
 from http import HTTPStatus
-import logging
 import os
 import pathlib 
 import sys
@@ -14,6 +13,8 @@ import ccxt
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, BaseSettings, validator
+
+from lib import Candle
 
 class ServerErrors:     # TODO(nochiel) Replace these with HTTPException
     NO_DATA = 'Spotbit did not find any data.'
@@ -74,7 +75,6 @@ def get_logger():
 
 settings = Settings()
 
-# TODO(nochiel) Move this to the settings class.
 from enum import Enum
 CurrencyName = Enum('CurrencyName', [(currency, currency) for currency in settings.currencies])  
 
@@ -105,28 +105,6 @@ ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in supported_exchan
 
 # Exchange data is sometimes returned as epoch milliseconds.
 def is_ms(timestamp): return timestamp % 1e3 == 0
-
-class Candle(BaseModel):
-    timestamp   : datetime
-    open        : float
-    high        : float
-    low         : float
-    close       : float
-    volume      : float
-
-    @validator('timestamp')
-    def time_in_seconds(cls, v):
-        result = v
-
-        if type(v) is int and is_ms(v): 
-            result = int(v * 1e-3)
-
-        return result
-
-    class Config:
-        json_encoders = {
-                datetime: lambda v: v.isoformat()
-                }
 
 def get_supported_pair_for(currency: CurrencyName, exchange: ccxt.Exchange) -> str:
     assert exchange
@@ -273,7 +251,7 @@ async def main(request: Request):
     return templates.TemplateResponse("about.html", {"request": request})
 
 @app.get('/api/status')
-def status(): return "server is running"
+def status(): return 'The server is running.'
 
 # TODO(nochiel) FINDOUT Do we need to enable clients to change configuration? 
 # If clients should be able to change configuration, use sessions.
@@ -640,14 +618,12 @@ async def get_candles_in_range(
 
     return result
 
-
-# TODO(nochiel) If no exchange is given, test all supported exchanges until we get candles for all dates.
-# Return all database rows within `tolerance` for each of the supplied dates
-@app.post('/api/history/{currency}/{exchange}')
+@app.post('/api/history/{currency}')
 async def get_candles_at_dates(
         currency: CurrencyName, 
-        exchange: ExchangeName,
-        dates:    list[datetime]) -> list[Candle]:
+        dates:    list[datetime],
+        exchange: ExchangeName = list(ExchangeName.__members__.values())[0],
+) -> list[Candle]:
     '''
     Dates should be provided in the body of the request as a json array of  dates formatted as ISO8601 "YYYY-MM-DDTHH:mm:SS".
     '''

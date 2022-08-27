@@ -426,20 +426,6 @@ python3.10 -m pip install -r requirements.txt
 cd "$SCRIPTS_DIR"
 
 ####
-# 6. Copy spotbit.config
-####
-# Copy the default config to file
-if test -f "/home/spotbit/.spotbit/spotbit.config"; then
-  echo "configs already configured"
-else
-  mkdir /home/spotbit/.spotbit
-  chown -R spotbit /home/spotbit/.spotbit
-  touch /home/spotbit/.spotbit/spotbit.config
-  cat spotbit.config >> /home/spotbit/.spotbit/spotbit.config
-fi
-
-
-####
 # 7. Setup systemd service
 ####
 
@@ -456,7 +442,7 @@ Requires=tor.service
 After=tor.service
 
 [Service]
-ExecStart=/usr/local/bin/python3.10 /home/spotbit/spotbit/app.py
+ExecStart=/usr/local/bin/python3.10 /home/spotbit/spotbit/app.py run
 
 # Process management
 ####################
@@ -470,6 +456,7 @@ Restart=on-failure
 User=spotbit
 Group=spotbit
 # /run/spotbit
+WorkingDirectory=/home/spotbit/spotbit
 RuntimeDirectory=spotbit
 RuntimeDirectoryMode=0710
 
