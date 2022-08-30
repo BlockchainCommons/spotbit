@@ -528,6 +528,7 @@ async def make_beancount_file_for(
     spotbit:    Spotbit):
 
     parsed_descriptor = ParsedDescriptor(descriptor)
+    _logger.debug(f'{parsed_descriptor=}')
 
     config  =  bdk.DatabaseConfig.MEMORY('')
     esplora = bdk.BlockchainConfig.ESPLORA(
@@ -646,14 +647,14 @@ class DescriptorType(Enum):
 class Account:
     # Ref. BIP44
     # m / purpose' / coin_type' / account' / change / address_index
-    purpose:    int
-    coin_type:  str
-    change:     int
-    index:      int
-    account:    str
+    purpose:    int = field(default = 0)
+    coin_type:  str = field(default = '')
+    change:     int = field(default = 0)
+    index:      int = field(default = 0)
+    account:    str = field(default = '0h')
 
     def __init__(self, derivation_steps: str):
-        self.account = '0h'
+        ...
 
     def get_account_number(self):
         return self.account[:-1]
@@ -663,7 +664,7 @@ class ParsedDescriptor:
     external_descriptor : Script | None = field(default = None)
     change_descriptor   : Script | None = field(default = None)
     fingerprint         : str = field(default = '')
-    account             : Account | None = field(default = None)    # TODO(nochiel)
+    account             : Account = field(default = Account(''))    # TODO(nochiel)
     keys                : list[Key] = field(default_factory = list)           # 'multi', 'tr', have n+1 keys.
     type                : DescriptorType = field(default = DescriptorType.UNKNOWN)
     checksum            : str = field(default = '')
@@ -678,16 +679,18 @@ class ParsedDescriptor:
         Given a descriptor (maybe with a multipath template), 
         parse it out into (descriptor, change_descriptor) pair.
         '''
-        _logger.debug(f'descriptor: {descriptor}')
+        _logger.debug(f'{descriptor=}')
 
         def parse_keys(data: str) -> list[Key]:
             # Assumption: data has one key.
             # Assumption: data has a multipath descriptor in its path.
+            _logger.debug(data)
             result = []
 
             self.fingerprint = ''
             cursor = 0
             if data[0] == '[':
+                _logger.debug('Parsing fingerprint.')
                 cursor = data.find(']')
                 hierarchy = data[1 : cursor]
                 end_fingerprint = hierarchy.find('/')
@@ -697,6 +700,7 @@ class ParsedDescriptor:
 
             key_data = data[cursor:] or None
             if key_data:
+                _logger.debug(f'{key_data=}')
                 main_key_paths, change_key_paths = [], []
                 paths = key_data.split('/')
                 has_change_path = False
@@ -717,9 +721,10 @@ class ParsedDescriptor:
                     result.append(Key(self.fingerprint, [paths[0]] + main_key_paths))
                     result.append(Key(self.fingerprint, [paths[0]] + change_key_paths))
                 else:
+                    _logger.debug(f'{paths=}')
                     result.append(Key(self.fingerprint, paths))
 
-            # _logger.info(f'>>> parse_key: {result}')
+            _logger.info(f'{result=}')
             return result
 
         def parse_script(
@@ -728,7 +733,7 @@ class ParsedDescriptor:
             ) -> list[Script]:
             # TODO(nochiel) Parse 'multi' and 'sortedmulti' script keys.
             # TODO(nochiel) Parse 'tr' keys.
-            # _logger.debug(f'parse_script: {script}')
+            _logger.debug(f'{script}')
 
             result          = []
             script_start    = 0
@@ -737,6 +742,7 @@ class ParsedDescriptor:
 
             i = script.find('(')
             if i == -1: 
+                _logger.debug('Parsing key.')
                 self.keys   = parse_keys(script)
                 result = [Script(ScriptType.key, key) for key in self.keys]
             else:
@@ -747,20 +753,25 @@ class ParsedDescriptor:
                 result = [Script(ScriptType[script_type], script)
                     for script in parse_script(inner_script)]
 
-            # _logger.debug(f'>>> parse_script: {result}')
-            # _logger.debug('---')
-
+            _logger.debug(f'{result=}')
             return result
 
+        _logger.debug('Looking for checksum.')
         checksum_index = descriptor.find('#')
         script = descriptor
         checksum = ''
         if checksum_index != -1:
+            _logger.debug('Checksum found.')
             script, self.checksum = descriptor.split('#')
 
-        [self.external_descriptor, self.change_descriptor] = parse_script(script)
-
-        return 
+        descriptors = parse_script(script)
+        _logger.debug(f'{descriptors=}')
+        if len(descriptors) == 1: 
+            [self.external_descriptor, self.change_descriptor] = descriptors[0], None
+        else:
+            [self.external_descriptor, self.change_descriptor] = descriptors
+        _logger.debug(f'{self.external_descriptor=}')
+        _logger.debug(f'{self.change_descriptor=}')
 
     def get_address_type(self) -> DescriptorType:
         # Ref. https://en.bitcoin.it/wiki/List_of_address_prefixes
