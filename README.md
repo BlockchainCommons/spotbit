@@ -83,7 +83,7 @@ python -m pip install -r requirements.txt
 
 Run
 ```
-python app.py run
+python app.py
 ```
 
 ## Installation Instructions

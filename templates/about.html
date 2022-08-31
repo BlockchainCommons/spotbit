@@ -1,188 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Spotbit|ABOUT</title>
-    <base href="/spotbit/">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
-    <!-- load Google fonts -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
-        <!--Material Component-->
-        <link
-        href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css"
-        rel="stylesheet"
-      />
-      <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
-    <!-- Crypto Styles -->
-    <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
-    <!-- page specific CSS -->
-  </head>
+{% extends "base.html" %}
 
-  <body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
- 
-    <div class="crypto-wrapper">
-        <div class="crypto-sidenav">
-          <nav class="crypto-navigation">
-    <a href="/" class="crypto-navigation__logo">
-      <!-- Image element or even SVG can be used here -->
-      <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-    </a>
-    <ul class="crypto-navigation__list">
-        <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-          <a href="/about">
-            <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
-            <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-              ABOUT
-            </span>
-          </a>
-        </li>
-    </ul>
-    <ul class="crypto-navigation__list">
-        <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-          <a href="/faq">
-            <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
-            <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-              FAQ
-            </span>
-          </a>
-        </li>
-    </ul>
-    <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
-        <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-     </a>
-      </nav>
-      </div>
-      <main class="crypto-main">
-        <div class="crypto-main__content mdc-theme--text-primary-on-background">
-  <div class="mdc-layout-grid mdc-layout-grid--demo">
-    <div class="mdc-layout-grid__inner">
-      <div class="mdc-layout-grid__cell--span-1-desktop"></div>
-      <div class="mdc-layout-grid__cell--span-10-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
-        <div class="crypto-widget crypto-widget--margin-bottom">
-          <h2 class="crypto-widget__heading crypto-widget__heading--fullwidth mdc-typography--headline6 mdc-theme--primary">
-            <span class="crypto-widget__heading-text">ABOUT</span>
-            <span class="crypto-widget__heading-border"></span>
-          </h2>
-          <div class="crypto-widget__content">
-            <p class="mdc-typography--body1">
+{% block title %} Spotbit|About{% endblock %}
+
+{% block content %}
+    <main class="crypto-main">
+      <div class="crypto-main__content mdc-theme--text-primary-on-background">
+        <div class="mdc-layout-grid mdc-layout-grid--demo">
+          <div class="mdc-layout-grid__inner">
+            <div class="mdc-layout-grid__cell--span-1-desktop"></div>
+            <div
+              class="mdc-layout-grid__cell--span-10-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
+              <div class="crypto-widget crypto-widget--margin-bottom">
+                <h2
+                  class="crypto-widget__heading crypto-widget__heading--fullwidth mdc-typography--headline6 mdc-theme--primary">
+                  <span class="crypto-widget__heading-text">ABOUT</span>
+                  <span class="crypto-widget__heading-border"></span>
+                </h2>
                 <div class="crypto-widget__content">
+                  <p class="mdc-typography--body1">
+                  <div class="crypto-widget__content">
                     <div class="crypto-wallet-overview">
-                           <div>Spotbit is a portable FastAPI for Bitcoin price data and candles. It can either be used as a repository of historical data that allows for more frequent API requests, or as a simple wrapper around exchange APIs that premits the user to collect information over Tor. It can aggregate data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD, EUR etc), which exchanges to keep data for, and how much data to keep
-                            <div>Learn more on how you can setup your own Spotbit on<a href="https://github.com/BlockchainCommons/spotbit"> github</a>.
-                            </div>
+                      <div>Spotbit is a portable FastAPI for Bitcoin price data and candles. It can either be used as a
+                        repository of historical data that allows for more frequent API requests, or as a simple wrapper
+                        around exchange APIs that premits the user to collect information over Tor. It can aggregate
+                        data from over 100 exchanges and serve them from a single URL or using Tor as an onion hidden
+                        service. It's extremely flexible: the user can decide which base currencies to use (USDT, USD,
+                        EUR etc), which exchanges to keep data for, and how much data to keep
+                        <div>Learn more on how you can setup your own Spotbit on<a
+                            href="https://github.com/BlockchainCommons/spotbit"> github</a>.
+                        </div>
 
-                          </div>
-        
-                    </div>
-                </div>
-            </p>
-            
-          </div>
-          <div class="crypto-widget__content">
-            <p class="mdc-typography--body1">
-                <div class="crypto-widget__content">
-                    <div class="crypto-wallet-overview">
-                           <div>Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability, and self-sovereignty advantages. It works particularly well with the <a href="https://github.com/sponsors/BlockchainCommons">Gordian system</a>, which supports Tor connections between a <a href="https://github.com/sponsors/BlockchainCommons">Gordian Wallet</a> and a <a href="https://github.com/sponsors/BlockchainCommons"></a>Gordian Server or other server installed by <a href="https://github.com/sponsors/BlockchainCommons">Bitcoin Standup scripts</a>.
-                            Spotbit is an example of a microservices meant to display how the <a href="https://github.com/BlockchainCommons/spotbit">Gordian Principles</a>, which are philosophical and technical underpinnings to Blockchain Commons' Gordian technology, are supported by the Gordian Architecture. 
-
-                            <div>Contribute to Spotbit on <a href="https://github.com/BlockchainCommons/spotbit">Github</a> or by <a href="https://github.com/sponsors/BlockchainCommons">sponsoring</a> Blockchain Commons on Github as well.  
+                      </div>
 
                     </div>
+                  </div>
+                  </p>
+
                 </div>
-            </p>
-            
+                <div class="crypto-widget__content">
+                  <p class="mdc-typography--body1">
+                  <div class="crypto-widget__content">
+                    <div class="crypto-wallet-overview">
+                      <div>Spotbit can be used by anyone who wants to take advantage of its privacy, speed, reliability,
+                        and self-sovereignty advantages. It works particularly well with the <a
+                          href="https://github.com/sponsors/BlockchainCommons">Gordian system</a>, which supports Tor
+                        connections between a <a href="https://github.com/sponsors/BlockchainCommons">Gordian Wallet</a>
+                        and a <a href="https://github.com/sponsors/BlockchainCommons"></a>Gordian Server or other server
+                        installed by <a href="https://github.com/sponsors/BlockchainCommons">Bitcoin Standup
+                          scripts</a>.
+                        Spotbit is an example of a microservices meant to display how the <a
+                          href="https://github.com/BlockchainCommons/spotbit">Gordian Principles</a>, which are
+                        philosophical and technical underpinnings to Blockchain Commons' Gordian technology, are
+                        supported by the Gordian Architecture.
+
+                        <div>Contribute to Spotbit on <a href="https://github.com/BlockchainCommons/spotbit">Github</a>
+                          or by <a href="https://github.com/sponsors/BlockchainCommons">sponsoring</a> Blockchain
+                          Commons on Github as well.
+
+                        </div>
+                      </div>
+                      </p>
+
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-
-        </div>
-	 </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
-        </div>
-      </main>
-    </div>
-    <div class="crypto-menu-switches">
-  <div class="crypto-menu-switches--handle">
-    <i class="material-icons">settings</i>
-  </div>
-  <!-- RTL switch -->
-  <div class="switch-wrapper mdc-theme--on-primary">
-    <div class="mdc-switch crypto-rtl-switch-selector">
-      <div class="mdc-switch__track"></div>
-      <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-          <input type="checkbox" id="rtl-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
-        </div>
-      </div>
-    </div>
-    <label for="rtl-switch">RTL</label>
-  </div>
-  <!-- theme switch -->
-  <div class="switch-wrapper mdc-theme--on-primary">
-    <div class="mdc-switch crypto-theme-switch-selector">
-      <div class="mdc-switch__track"></div>
-      <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-          <input type="checkbox" id="crypto-theme-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
-        </div>
-      </div>
-    </div>
-    <label for="crypto-theme-switch">Switch theme</label>
-  </div>
-</div>
+  {% endblock %}
 
-
-    <!-- initialise material components js -->
-    <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
-    <script>mdc.autoInit()</script>
-    <!-- initialise marquee js -->
-    <script src="https://cdn.jsdelivr.net/npm/marquee3000@1.1.1/marquee3k.min.js"></script>
-    <script>
-      Marquee3k.init();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <!-- switcher js -->
-    <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
-    <!-- page specific JS -->
-    
-<script>
-  (function() {
-    const determinates = document.querySelectorAll('.mdc-linear-progress');
-    for (let i = 0, determinate; determinate = determinates[i]; i++) {
-      const linearProgress = mdc.linearProgress.MDCLinearProgress.attachTo(determinate);
-      linearProgress.progress = 0.5;
-      if (determinate.dataset.buffer) {
-        linearProgress.buffer = 0.75;
-      }
-    }
-
-    // // //TODO:MISSING HTML MARKUP
-    // // Tabs example.
-    // new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
-
-    // // Checkbox
-    // document.getElementById('basic-indeterminate-checkbox').indeterminate = true;
-
-    // // Textfields
-    // const tfRoot = document.querySelectorAll('.mdc-text-field');
-    // for (let i = 0; i < tfRoot.length; i++) {
-    //   new mdc.textField.MDCTextField(tfRoot[i]);
-    // }
-
-    // // Select
-    // new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
-
-    // // Slider
-    // const MDCSlider = mdc.slider.MDCSlider;
-    // const elements = document.querySelectorAll('.mdc-slider');
-    // for (let i = 0; i < elements.length; i++) {
-    //   new MDCSlider(elements[i]);
-    // }
-  })();
-</script>
-  </body>
-</html>
-
+  {% block scripts %}
+    {{ super() }}
+  <!-- page specific JS -->
+  <script src="{{ url_for('static', path='/assets/js/pages/determinates.js') }}"></script>
+    {% endblock %}
