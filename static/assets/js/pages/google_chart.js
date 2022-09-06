@@ -69,21 +69,5 @@ function drawChart() {
 //FIX URI REQUEST ENDPOINT
 function getPrice(exchange) {
   console.log(exchange);
-  $.ajax({
-    url: "proxy.php?exchange=" + exchange,
-    dataType: "json",
-    cache: true,
-    success: function (data) {
-      var data2 = JSON.parse("[" + JSON.stringify(data) + "]");
-      var arr = data2[0];
-      console.log(arr[0]);
-      var b = arr[0];
-      console.log("Exchange:" + exchange + " Price: " + b.close);
-      $("#" + exchange).html(b.close);
-    },
-    function(xhr, ajaxOptions, thrownError) {
-      alert(xhr.status);
-      alert(thrownError);
-    },
-  });
+
 }
