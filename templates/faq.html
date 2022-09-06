@@ -1,167 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Spotbit|FAQ</title>
-    <base href="/spotbit/">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
-    <!-- load Google fonts -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700" rel="stylesheet">
-    <!--Material Components-->
-    <link
-    href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css"
-    rel="stylesheet"
-  />
-  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
-    <!-- Crypto Styles -->
-    <link id="crypto-stylesheet" rel="stylesheet" href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
-    <!-- page specific CSS -->
-  </head>
+{% extends "base.html" %}
 
-  <body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
- 
-    <div class="crypto-wrapper">
-      <div class="crypto-sidenav">
-        <nav class="crypto-navigation">
-  <a href="/" class="crypto-navigation__logo">
-    <!-- Image element or even SVG can be used here -->
-    <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-  </a>
-  <ul class="crypto-navigation__list">
-      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-        <a href="/about">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
-          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            ABOUT
-          </span>
-        </a>
-      </li>
-  </ul>
-  <ul class="crypto-navigation__list">
-      <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
-        <a href="/faq">
-          <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
-          <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
-            FAQ
-          </span>
-        </a>
-      </li>
-  </ul>
-  <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
-	  <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto" class="crypto-navigation__logo-image">
-   </a>
-	</nav>
-      </div>
-      <main class="crypto-main">
-        <div class="crypto-main__content mdc-theme--text-primary-on-background">
-  <div class="mdc-layout-grid mdc-layout-grid--demo">
-    <div class="mdc-layout-grid__inner">
-      <div class="mdc-layout-grid__cell--span-1-desktop"></div>
-      <div class="mdc-layout-grid__cell--span-10-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
-        <div class="crypto-widget crypto-widget--margin-bottom">
-          <h2 class="crypto-widget__heading crypto-widget__heading--fullwidth mdc-typography--headline6 mdc-theme--primary">
-            <span class="crypto-widget__heading-text">FAQ</span>
-            <span class="crypto-widget__heading-border"></span>
-          </h2>
-          <div class="crypto-widget__content">
-            <p class="mdc-typography--body1">Frequently Asked Questions</p>
-            <ul class="crypto-list mdc-typography--body1">
-              <li><strong>Where are the available onion addresses for SpotBit?</strong> h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion </li>
-              <li><strong>How are fiat currency values averaged?</strong> For each of the listed fiat currencies, there is a list of five exchanges that will be used to average data for the `/now/CURRENCY` endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating. In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as btse). These exchanges should all be listed in the `exchanges` field of the `spotbit.config` in order to ensure SpotBit runs as smoothly as possible. The default config will include these values for you.</li>
-              <li><strong>How does the SpotBit web page work?</strong> The web page loads JSON data exposed by Spotbit every 15 seconds. It uses AJAX calls to load data and the Charts API to draw the chart.</li>
-              <li><strong>Can SpotBit be used with WebSockets?</strong> The web page can be used with WebSockets when Spotbit returns data using that option.</li>
-            </ul>
+{% block title %} Spotbit|Faq{% endblock %}
+
+{% block content %}
+    <main class="crypto-main">
+      <div class="crypto-main__content mdc-theme--text-primary-on-background">
+        <div class="mdc-layout-grid mdc-layout-grid--demo">
+          <div class="mdc-layout-grid__inner">
+            <div class="mdc-layout-grid__cell--span-1-desktop"></div>
+            <div
+              class="mdc-layout-grid__cell--span-10-desktop mdc-layout-grid__cell--span-8-tablet mdc-layout-grid__cell--span-4-phone">
+              <div class="crypto-widget crypto-widget--margin-bottom">
+                <h2
+                  class="crypto-widget__heading crypto-widget__heading--fullwidth mdc-typography--headline6 mdc-theme--primary">
+                  <span class="crypto-widget__heading-text">FAQ</span>
+                  <span class="crypto-widget__heading-border"></span>
+                </h2>
+                <div class="crypto-widget__content">
+                  <p class="mdc-typography--body1">Frequently Asked Questions</p>
+                  <ul class="crypto-list mdc-typography--body1">
+                    <li><strong>Where are the available onion addresses for SpotBit?</strong>
+                      h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion </li>
+                    <li><strong>How are fiat currency values averaged?</strong> For each of the listed fiat currencies,
+                      there is a list of five exchanges that will be used to average data for the `/now/CURRENCY`
+                      endpoint. They have been selected based on volume rankings and coinmarketcap's confidence rating.
+                      In order to stick with exchanges supported by `ccxt`, some candidates were excluded (such as
+                      btse). These exchanges should all be listed in the `exchanges` field of the `spotbit.config` in
+                      order to ensure SpotBit runs as smoothly as possible. The default config will include these values
+                      for you.</li>
+                    <li><strong>How does the SpotBit web page work?</strong> The web page loads JSON data exposed by
+                      Spotbit every 15 seconds. It uses AJAX calls to load data and the Charts API to draw the chart.
+                    </li>
+                    <li><strong>Can SpotBit be used with WebSockets?</strong> The web page can be used with WebSockets
+                      when Spotbit returns data using that option.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-	 </div>
-        </div>
       </div>
-    </div>
   </div>
-        </div>
-      </main>
-    </div>
-    <div class="crypto-menu-switches">
-  <div class="crypto-menu-switches--handle">
-    <i class="material-icons">settings</i>
   </div>
-  <!-- RTL switch -->
-  <div class="switch-wrapper mdc-theme--on-primary">
-    <div class="mdc-switch crypto-rtl-switch-selector">
-      <div class="mdc-switch__track"></div>
-      <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-          <input type="checkbox" id="rtl-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
-        </div>
-      </div>
-    </div>
-    <label for="rtl-switch">RTL</label>
+  </main>
   </div>
-  <!-- theme switch -->
-  <div class="switch-wrapper mdc-theme--on-primary">
-    <div class="mdc-switch crypto-theme-switch-selector">
-      <div class="mdc-switch__track"></div>
-      <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-          <input type="checkbox" id="crypto-theme-switch" class="mdc-switch__native-control" role="switch" aria-checked="false">
-        </div>
-      </div>
-    </div>
-    <label for="crypto-theme-switch">Switch theme</label>
-  </div>
-</div>
+{% endblock %}
 
-
-    <!-- initialise material components js -->
-    <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
-    <script>mdc.autoInit()</script>
-    <!-- initialise marquee js -->
-    <script src="https://cdn.jsdelivr.net/npm/marquee3000@1.1.1/marquee3k.min.js"></script>
-    <script>
-      Marquee3k.init();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <!-- switcher js -->
-    <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
-    <!-- page specific JS -->
-    
-<script>
-  (function() {
-    const determinates = document.querySelectorAll('.mdc-linear-progress');
-    for (let i = 0, determinate; determinate = determinates[i]; i++) {
-      const linearProgress = mdc.linearProgress.MDCLinearProgress.attachTo(determinate);
-      linearProgress.progress = 0.5;
-      if (determinate.dataset.buffer) {
-        linearProgress.buffer = 0.75;
-      }
-    }
-
-    // // //TODO:MISSING HTML MARKUP
-    // // Tabs example.
-    // new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
-
-    // // Checkbox
-    // document.getElementById('basic-indeterminate-checkbox').indeterminate = true;
-
-    // // Textfields
-    // const tfRoot = document.querySelectorAll('.mdc-text-field');
-    // for (let i = 0; i < tfRoot.length; i++) {
-    //   new mdc.textField.MDCTextField(tfRoot[i]);
-    // }
-
-    // // Select
-    // new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
-
-    // // Slider
-    // const MDCSlider = mdc.slider.MDCSlider;
-    // const elements = document.querySelectorAll('.mdc-slider');
-    // for (let i = 0; i < elements.length; i++) {
-    //   new MDCSlider(elements[i]);
-    // }
-  })();
-</script>
-  </body>
-</html>
-
+{% block scripts %}
+{{ super() }}
+<!-- page specific JS -->
+<script src="{{ url_for('static', path='/assets/js/pages/determinates.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,13 @@
+#chart_div {
+    width: 800px;
+    height: 400px;
+  }
+  noscript {
+    padding-top: 20px;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }

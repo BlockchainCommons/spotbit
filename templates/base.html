@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% block head %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>{% block title %}{% endblock %}</title>
+  <base href="/spotbit/">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}">
+  <!-- load Google fonts -->
+  <link
+    href="https://fonts.googleapis.com/icon?family=Material+Icons%7CPlayfair+Display:400,400i,700%7CRoboto+Condensed:400,700"
+    rel="stylesheet">
+  <!--Material Components-->
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet" />
+  <!-- Crypto Styles -->
+  <link id="crypto-stylesheet" rel="stylesheet"
+    href="{{ url_for('static', path='/assets/css/night-gold-orange.css') }}">
+  <!-- page specific CSS -->
+  {% endblock %}
+</head>
+
+<body class="mdc-typography  mdc-theme--background crypro-theme-gradient">
+
+  <div class="crypto-wrapper">
+    <div class="crypto-sidenav">
+      <nav class="crypto-navigation">
+        <a href="/" class="crypto-navigation__logo">
+          <!-- Image element or even SVG can be used here -->
+          <img src="{{ url_for('static', path='/assets/images/logos/spotbit_avatar.jpg') }}" height="40" alt="Crypto"
+            class="crypto-navigation__logo-image">
+        </a>
+        <ul class="crypto-navigation__list">
+          <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+            <a href="/about">
+              <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">local_library</i>
+              <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+                ABOUT
+              </span>
+            </a>
+          </li>
+        </ul>
+        <ul class="crypto-navigation__list">
+          <li class="crypto-navigation__list-item mdc-ripple-surface crypto-navigation__list-item--active">
+            <a href="/faq">
+              <i class="material-icons crypto-navigation__list-item__icon" aria-hidden="true">help</i>
+              <span class="crypto-navigation__list-item__label mdc-theme--on-surface mdc-typography--overline">
+                FAQ
+              </span>
+            </a>
+          </li>
+        </ul>
+        <a href="https://www.blockchaincommons.com" class="crypto-navigation__logo">
+          <img src="{{ url_for('static', path='/assets/images/bc-logo-black.png') }}" height="40" alt="Crypto"
+            class="crypto-navigation__logo-image">
+        </a>
+      </nav>
+    </div>
+
+    {% block content %}
+    
+    {% endblock %}
+
+    {% block scripts %}
+ <div class="crypto-menu-switches">
+    <div class="crypto-menu-switches--handle">
+      <i class="material-icons">settings</i>
+    </div>
+    <!-- RTL switch -->
+    <div class="switch-wrapper mdc-theme--on-primary">
+      <div class="mdc-switch crypto-rtl-switch-selector">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+          <div class="mdc-switch__thumb">
+            <input type="checkbox" id="rtl-switch" class="mdc-switch__native-control" role="switch"
+              aria-checked="false">
+          </div>
+        </div>
+      </div>
+      <label for="rtl-switch">RTL</label>
+    </div>
+    <!-- theme switch -->
+    <div class="switch-wrapper mdc-theme--on-primary">
+      <div class="mdc-switch crypto-theme-switch-selector">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+          <div class="mdc-switch__thumb">
+            <input type="checkbox" id="crypto-theme-switch" class="mdc-switch__native-control" role="switch"
+              aria-checked="false">
+          </div>
+        </div>
+      </div>
+      <label for="crypto-theme-switch">Switch theme</label>
+    </div>
+  </div>
+
+
+  <!-- initialise material components js -->
+  <script src="{{ url_for('static', path='/assets/js/material-components-web.min.js') }}"></script>
+  <script>mdc.autoInit()</script>
+  <!-- initialise marquee js -->
+  <script src="https://cdn.jsdelivr.net/npm/marquee3000@1.1.1/marquee3k.min.js"></script>
+  <script>
+    Marquee3k.init();
+  </script>
+  <!-- switcher js -->
+  <script src="{{ url_for('static', path='/assets/js/partials/switcher.js') }}"></script>
+  {% endblock %}
+</body>
+</html>
