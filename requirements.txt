@@ -66,7 +66,7 @@ shellingham==1.4.0
 six==1.16.0
 sniffio==1.2.0
 soupsieve==2.3.2
-starlette==0.17.1
+starlette==0.21.0
 toml==0.10.2
 tomli==2.0.1
 typer==0.4.1
