@@ -242,11 +242,11 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/faq", response_class=HTMLResponse)
-async def main(request: Request):
+async def faq(request: Request):
     return templates.TemplateResponse("faq.html", {"request": request})
 
 @app.get("/about", response_class=HTMLResponse)
-async def main(request: Request):
+async def about(request: Request):
     return templates.TemplateResponse("about.html", {"request": request})
 
 @app.get('/api/status')
@@ -621,8 +621,10 @@ async def get_candles_in_range(
 async def get_candles_at_dates(
         currency: CurrencyName, 
         dates:    list[datetime],
-        exchange: ExchangeName = list(ExchangeName.__members__.values())[0],
-) -> list[Candle]:
+        # FIXME(nochiel) Ideally, we should get data from all the configured exchanges.
+        # Then pick the results that are complete.
+        exchange: ExchangeName # = list(ExchangeName.__members__.values())[0],
+        ) -> list[Candle]:
     '''
     Dates should be provided in the body of the request as a json array of  dates formatted as ISO8601 "YYYY-MM-DDTHH:mm:SS".
     '''
@@ -671,7 +673,7 @@ async def get_candles_at_dates(
     result = [candles_at[0] for candles_at in candles_found if candles_at]
     if not result:
         raise HTTPException(
-                detail  = f'Spotbit did not receive any candle history for the requested dates.',
+                detail  = f'Spotbit did not receive any candle history for the requested dates\n{dates = }.',
                 status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
