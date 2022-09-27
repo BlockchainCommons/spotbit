@@ -30,7 +30,7 @@ class Error(BaseModel):
 class Settings(BaseSettings):
 
     exchanges:              list[str] = []
-    currencies:             list[str]
+    currencies:             list[str] = []
 
     onion:                  str | None = None
     debug:                  bool  = False
@@ -83,7 +83,7 @@ assert logger
 
 app = FastAPI(debug = settings.debug)
 
-logger.debug(f'Using currencies: {settings.currencies}')
+logger.debug(f'{settings.currencies = }')
 if not settings.exchanges:
     logger.info('using all exchanges.')
     settings.exchanges = list(ccxt.exchanges)
@@ -107,7 +107,6 @@ ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in supported_exchan
 def is_ms(timestamp): return timestamp % 1e3 == 0
 
 def get_supported_pair_for(currency: CurrencyName, exchange: ccxt.Exchange) -> str:
-    assert exchange
 
     result = ''
 
