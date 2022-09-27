@@ -38,7 +38,7 @@ _GAP_SIZE = 100
 class BDKIncompleteSyncError(Exception):
     pass
 
-class EsploraTimedOutError(Exception):
+class TimedOutError(Exception):
     pass
 
 class WalletCreationError(Exception):
@@ -48,7 +48,7 @@ def get_logger(verbose = False):
 
     import logging
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.INFO)
     if verbose:
         logger.setLevel(logging.DEBUG)
 
@@ -603,14 +603,13 @@ async def make_beancount_file_for(
 
             retry = False
 
-        except bdk.BdkError.Esplora as e:
+        except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
             # FIXME(nochiel) We don't need to handle this here.
             # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
             retry = False
-            if 'TimedOut' in str(e):
-                raise EsploraTimedOutError(e)
-                _logger.info('Esplora timed out. Wait a while then try again later.')
+            if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
                 _logger.error(e)
+                raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
             raise Exception('Error while syncing wallet.', e) 
 
         except bdk.BdkError.Descriptor as e:
