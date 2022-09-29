@@ -542,83 +542,87 @@ async def make_beancount_file_for(
     retry = True
     wallet = None
 
-    def new_wallet():
-        wallet = bdk.Wallet(
-                descriptor = (str(parsed_descriptor.external_descriptor) 
-                    if parsed_descriptor.change_descriptor
-                    else descriptor),
-                change_descriptor = (str(parsed_descriptor.change_descriptor) 
-                    if parsed_descriptor.change_descriptor
-                    else descriptor),   
-                network = network,
-                database_config = bdk.DatabaseConfig.MEMORY())
-        return wallet
-
-    wallet = new_wallet()
-    '''
-    esplora = bdk.BlockchainConfig.ESPLORA(
-            bdk.EsploraConfig(
-                base_url = get_esplora_api(network),
-                proxy = None, 
-                stop_gap = _GAP_SIZE,
-                concurrency = 8,
-                timeout = 500,))
-    '''
-    electrum = bdk.BlockchainConfig.ELECTRUM(
-            bdk.ElectrumConfig(
-                url = get_electrum_api(network),
-                socks5 = None,
-                retry = 5,
-                timeout = 100,
-                stop_gap = _GAP_SIZE))
-    blockchain = bdk.Blockchain(electrum)
-
-    while retry:
+    def new_wallet(descriptor = descriptor, parsed_descriptor = parsed_descriptor) -> bdk.Wallet | None:
+        wallet = None
         try:
-            class Progress(bdk.Progress):
-                def update(self, progress, message): 
-                    _logger.info(f'Syncing wallet: {progress}, {message}')
-
-            _logger.info('Attempting to sync wallet.')
-            wallet.sync(blockchain, Progress())
-            _logger.info('Wallet sync completed.')
-
-            bdk_sync_was_incomplete = (wallet.list_transactions() and wallet.get_balance().confirmed == 0)
-            if bdk_sync_was_incomplete:
-                raise BDKIncompleteSyncError(f'{len(wallet.list_transactions()) = }, {wallet.get_balance().confirmed = }')
-
-            _logger.debug('Wallet sync successful.')
-            _logger.debug(f'{str(wallet.get_balance()) =}')
-
-            if not wallet.list_transactions():
-                if len(parsed_descriptor.keys[0].paths) == 1:
-                    _logger.info('The descriptor has no paths. We will attempt to use a default path of "0/*" to create the wallet.')
-                    retry = True
-                    parsed_descriptor.keys[0].paths.extend(['0', '*'])
-                    descriptor = str(parsed_descriptor.external_descriptor)
-                    _logger.debug(f'{descriptor = }')
-                    continue
-
-            retry = False
-
-        except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
-            # FIXME(nochiel) We don't need to handle this here.
-            # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
-            retry = False
-            if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
-                _logger.error(e)
-                raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
-            raise Exception('Error while syncing wallet.', e) 
+            wallet = bdk.Wallet(
+                    descriptor = (str(parsed_descriptor.external_descriptor) 
+                        if parsed_descriptor.change_descriptor
+                        else descriptor),
+                    change_descriptor = (str(parsed_descriptor.change_descriptor) 
+                        if parsed_descriptor.change_descriptor
+                        else descriptor),   
+                    network = network,
+                    database_config = bdk.DatabaseConfig.MEMORY())
 
         except bdk.BdkError.Descriptor as e:
             if str(e) == 'Descriptor(InvalidDescriptorChecksum)':
                 _logger.info('This descriptor has an invalid checksum. We will try to create a wallet without using the checksum provided.')
+                assert '#' in descriptor, WalletCreationError(e)
                 descriptor = descriptor.partition('#')[0]
                 pased_descriptor = ParsedDescriptor(descriptor)
-                retry = True
-                continue
+                wallet = new_wallet(descriptor, parsed_descriptor)
             else:
                 raise WalletCreationError(e) 
+
+        return wallet
+
+    wallet = new_wallet()
+    if wallet:
+        '''
+        esplora = bdk.BlockchainConfig.ESPLORA(
+                bdk.EsploraConfig(
+                    base_url = get_esplora_api(network),
+                    proxy = None, 
+                    stop_gap = _GAP_SIZE,
+                    concurrency = 8,
+                    timeout = 500,))
+        '''
+        electrum = bdk.BlockchainConfig.ELECTRUM(
+                bdk.ElectrumConfig(
+                    url = get_electrum_api(network),
+                    socks5 = None,
+                    retry = 5,
+                    timeout = 100,
+                    stop_gap = _GAP_SIZE))
+        blockchain = bdk.Blockchain(electrum)
+
+        while retry:
+            try:
+                class Progress(bdk.Progress):
+                    def update(self, progress, message): 
+                        _logger.info(f'Syncing wallet: {progress}, {message}')
+
+                _logger.info('Attempting to sync wallet.')
+                wallet.sync(blockchain, Progress())
+                _logger.info('Wallet sync completed.')
+
+                bdk_sync_was_incomplete = (wallet.list_transactions() and wallet.get_balance().confirmed == 0)
+                if bdk_sync_was_incomplete:
+                    raise BDKIncompleteSyncError(f'{len(wallet.list_transactions()) = }, {wallet.get_balance().confirmed = }')
+
+                _logger.debug('Wallet sync successful.')
+                _logger.debug(f'{str(wallet.get_balance()) =}')
+
+                if not wallet.list_transactions():
+                    if len(parsed_descriptor.keys[0].paths) == 1:
+                        _logger.info('The descriptor has no paths. We will attempt to use a default path of "0/*" to create the wallet.')
+                        retry = True
+                        parsed_descriptor.keys[0].paths.extend(['0', '*'])
+                        descriptor = str(parsed_descriptor.external_descriptor)
+                        _logger.debug(f'{descriptor = }')
+                        continue
+
+                retry = False
+
+            except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
+                # FIXME(nochiel) We don't need to handle this here.
+                # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
+                retry = False
+                if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
+                    _logger.error(e)
+                    raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
+                raise Exception('Error while syncing wallet.', e) 
 
     assert wallet
 
