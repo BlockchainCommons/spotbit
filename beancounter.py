@@ -314,8 +314,6 @@ async def make_transaction_details(
 
             result.append(detail)
 
-        return result
-
     result.sort(key = lambda t: t.timestamp())
     return result
 
@@ -376,8 +374,8 @@ def make_records(wallet, descriptor, *,
     # Account directive
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     account_directives = [
-            f'{date_of_account_open} open {btc_account}\tBTC',
-            f'{date_of_account_open} open {fiat_account}\t{currency}',
+            f'{date_of_account_open.date()} open {btc_account}\tBTC',
+            f'{date_of_account_open.date()} open {fiat_account}\t{currency}',
             ]
 
     # TODO(nochiel) Order transactions by date. For each date record a btc price.
@@ -442,7 +440,7 @@ def make_records(wallet, descriptor, *,
         links = []
 
         transaction_title_directive = f'{date} * "Transaction hash: {detail.id()}"'
-        btc_amount_directive = f'\t{btc_account}\t{detail.amount()} BTC' 
+        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
         # FIXME(nochiel) Add cost basis.
         btc_amount_directive += f' @ {detail.twap :.2f} {currency}\t' 
 
@@ -614,7 +612,7 @@ async def make_beancount_file_for(
 
         except bdk.BdkError.Descriptor as e:
             if str(e) == 'Descriptor(InvalidDescriptorChecksum)':
-                _logger.error('This descriptor has an invalid checksum. We will try to create a wallet without using the checksum provided.')
+                _logger.info('This descriptor has an invalid checksum. We will try to create a wallet without using the checksum provided.')
                 descriptor = descriptor.partition('#')[0]
                 pased_descriptor = ParsedDescriptor(descriptor)
                 retry = True
@@ -655,8 +653,7 @@ async def make_beancount_file_for(
             currency     = currency,
             spotbit      = spotbit)
 
-    if not transaction_details:
-        raise Exception('No transaction details')
+    assert transaction_details, Exception('No transaction details.')
 
     # _logger.debug(f'{transaction_details = }')
 
