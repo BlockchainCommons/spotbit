@@ -257,9 +257,16 @@ async def get_transactions(
 
     return result
 
+class CSVTransaction(BaseModel):
+    Date:    datetime
+    Label:   str
+    Value:   float
+    Balance: float
+    Txid:     str
+
 @dataclass
 class TransactionDetails():
-    transaction: bdk.TransactionDetails 
+    transaction: bdk.TransactionDetails | CSVTransaction
     twap: float
 
     def __init__(self, *, transaction, twap):
@@ -267,11 +274,18 @@ class TransactionDetails():
         self.twap = twap
 
     def id(self) -> str:
-        result = self.transaction.txid  
+        if isinstance(self.transaction, bdk.TransactionDetails):
+            result = self.transaction.txid  
+        elif isinstance(self.transaction, CSVTransaction):
+            result = self.transaction.Txid
         return result
 
     def timestamp(self) -> datetime:
-        result = datetime.fromtimestamp(self.transaction.confirmation_time.timestamp)
+        if isinstance(self.transaction, bdk.TransactionDetails):
+            result = datetime.fromtimestamp(self.transaction.confirmation_time.timestamp)
+        elif isinstance(self.transaction, CSVTransaction):
+            result = self.transaction.Date
+
         return result
 
     def amount(self) -> float:
@@ -279,12 +293,15 @@ class TransactionDetails():
         Amount in BTC.
         '''
         result = 0.0
-        result = self.transaction.received - self.transaction.sent
+        if isinstance(self.transaction, bdk.TransactionDetails):
+            result = self.transaction.received - self.transaction.sent
+        elif isinstance(self.transaction, CSVTransaction):
+            result = self.transaction.Value
+
         return result * 1e-8
 
-
 async def make_transaction_details(
-        transactions: list[bdk.TransactionDetails],
+        transactions: list[bdk.TransactionDetails] | list[CSVTransaction],
         currency,
         spotbit: Spotbit
         ) -> list[TransactionDetails]:
@@ -293,12 +310,15 @@ async def make_transaction_details(
 
     result = []
 
-    candles = []
-    try:
-        candles = spotbit.get_candles_at_dates(
-                currency = currency,
-                dates = [datetime.fromtimestamp(t.confirmation_time.timestamp) for t in transactions])
+    candles, dates = [], []
+    if isinstance(transactions[0], bdk.TransactionDetails):
+        dates = [datetime.fromtimestamp(t.confirmation_time.timestamp) 
+                 for t in transactions]
+    elif isinstance(transactions[0], CSVTransaction):
+        dates = [t.Date for t in transactions]
 
+    try:
+        candles = spotbit.get_candles_at_dates(currency, dates)
     except HTTPException as e:
         raise Exception(e.detail) 
 
@@ -529,17 +549,43 @@ class Script(Token):
 
         return result
 
-async def make_beancount_file_for(
-    descriptor: Descriptor, 
-    account_name: str,
-    currency:   str, 
-    network:    bdk.Network,
-    spotbit:    Spotbit):
+def get_transactions_from_csv(filename: str, network: bdk.Network) -> tuple[list[Transaction], list[CSVTransaction]]:  
+    result = []
+
+    def get_tx(txid: Txid) -> Transaction | None:
+        result = None
+        request = f'{get_esplora_api(network)}/tx/{txid}'
+        response = requests.get(request)
+        # TODO(nochiel) Merge this with the other transaction code.
+        if response.status_code == 200:
+            result = Transaction.parse_obj(response.json())
+        return result
+
+    import csv
+    transactions = []
+    with open(filename, 'r') as f:
+        r = csv.DictReader(f)
+        for row in r:
+            tx = get_tx(row['Txid'])
+            transactions.append(tx)
+            result.append(CSVTransaction.parse_obj(row))
+
+    return transactions, result
+
+async def make_beancount_file_for(*,
+                                  spotbit:    Spotbit, 
+                                  descriptor: Descriptor, 
+                                  network:    bdk.Network,
+                                  account_name: str = '',
+                                  csv_filename: str = '',
+                                  currency:   str = 'USD', 
+        ) :
+
+    transaction_details = []
+    bdk_sync_was_incomplete = False
 
     parsed_descriptor = ParsedDescriptor(descriptor)
     _logger.debug(f'{parsed_descriptor = }')
-    
-    bdk_sync_was_incomplete = False
     retry = True
     wallet = None
 
@@ -625,38 +671,25 @@ async def make_beancount_file_for(
                     raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
                 raise Exception('Error while syncing wallet.', e) 
 
-    assert wallet
+        assert wallet
 
-    '''
-    addresses = []
-    # strange things happen when i ask bdk for addresses so that i can query esplora for transactions associated with those addresses if any. for some descriptors, i get addresses that have transactions that don't belong to the descriptor i.e. sparrow wallet does not list those transactions as belonging to the descriptor. it would seem, then that bdk is generating wrong addresses?
-    # additionally, because i can't ask bdk for internal addresses, this method of testing the gap does not allow us to exhaustively/accurately obtain all transactions associated with a descriptor.
-    while 1:
-        addresses_to_check = [wallet.get_address(bdk.addressindex.new).address for _ in range(_gap_size)]
-        _logger.debug(f'wallet addresses generated:\n\t' +
-                    '\n\t'.join(addresses_to_check[:10]) + 
-                    f'\n...{len(addresses_to_check[11:])} more...')
+        if not wallet.list_transactions():
+            _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
+            return
 
-        transactions_to_check = await get_transactions(addresses_to_check, network)    
-        if not transactions_to_check:
-            break
+        if not csv_filename:
+            _logger.debug('Making transaction details from wallet.')
+            transaction_details  = await make_transaction_details(
+                    transactions = wallet.list_transactions(),
+                    currency     = currency,
+                    spotbit      = spotbit)
 
-        transactions.extend(transactions_to_check)
-        addresses.extend(addresses_to_check)
-        addresses_to_check = [wallet.get_new_address() for _ in range(_GAP_SIZE)]
-
-    # _logger.debug('---transactions--')
-    '''
-
-    if not wallet.list_transactions():
-        _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
-        return
-
-    _logger.debug('Making transaction details.')
-    transaction_details  = await make_transaction_details(
-            transactions = wallet.list_transactions(),
-            currency     = currency,
-            spotbit      = spotbit)
+    if csv_filename:
+        _logger.debug('Making transaction details from csv file.')
+        # TODO(nochiel) allow the user to specify a csv exported from sparrow wallet from which to import transactions.
+        transactions, csv_rows = get_transactions_from_csv(csv_filename, network)
+        transactions.sort(key = lambda t: t.status.block_time)
+        transaction_details = await make_transaction_details(csv_rows, currency, spotbit)
 
     assert transaction_details, Exception('No transaction details.')
 
@@ -881,16 +914,17 @@ def format_filename(descriptor: ParsedDescriptor, account_name: str) -> str:
     key = descriptor.keys[0].paths[0]
     key_id = key[5:13] if key[:4] in ParsedDescriptor.BIP32_PREFIXES else key[:8]            
 
+    # Descriptor Type — A textual descriptor of the derivation path, currently: "legacy", "legacymultisig", "nested", "nestedmultisig", "segwit", "segwitmultisig", or "taproot".
+    descriptor_type = descriptor.get_address_type().value
+
+    account_number = descriptor.account.get_account_number() if descriptor.account else 0 
+
     # HDKey from Seed Name — The prefix "HDKey from" prepended to randomly created or user-selected name for seed. Space separated.
     from random_username.generate import generate_username
     seedname = f'HDKey from {generate_username()[0]}' 
 
     document_type = 'Output'
 
-    # Descriptor Type — A textual descriptor of the derivation path, currently: "legacy", "legacymultisig", "nested", "nestedmultisig", "segwit", "segwitmultisig", or "taproot".
-    descriptor_type = descriptor.get_address_type().value
-
-    account_number = descriptor.account.get_account_number() if descriptor.account else 0 
     # result = (
     #         f'{key_id}-'
     #         f'HDKey from {seedname}-'
@@ -911,11 +945,14 @@ def format_filename(descriptor: ParsedDescriptor, account_name: str) -> str:
 import typer
 from lib import Network
 
+from typing import Optional
 
 def beancount(
         spotbit_url: str,
         descriptor:  Descriptor,
-        name:        str, # TODO(nochiel) Document this.
+        year:        datetime = datetime.today(),
+        name:        Optional[str] = None, # TODO(nochiel) Document this.
+        csv:         Optional[str] = None,
         network:     Network = Network.TESTNET,
         currency:    str = 'USD',
         verbose:     bool = False):
@@ -930,9 +967,6 @@ def beancount(
     if verbose:
         _logger.setLevel(logging.DEBUG)
 
-    typer.echo(f'Generating beancount report for descriptor: {descriptor}')
-    typer.echo(f'{currency = }')
-
     spotbit = Spotbit(spotbit_url)
     import bdkpython as bdk
     bdk_network = bdk.Network[network.name.upper()]
@@ -940,8 +974,14 @@ def beancount(
     try:
        _logger.debug('Starting')
        _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
+
        result = asyncio.run(
-               make_beancount_file_for(descriptor, name, currency, bdk_network, spotbit), 
+               make_beancount_file_for(descriptor = descriptor, 
+                                       account_name = name if name else 'Tax report', 
+                                       csv_filename = csv if csv else '',
+                                       currency = currency, 
+                                       network = bdk_network, 
+                                       spotbit = spotbit), 
                # debug = True
                )
        result = result.result() if result else None
@@ -954,7 +994,7 @@ def beancount(
         if str(e): typer.echo(e)
         typer.echo(f'---')
         if verbose: 
-            raise
+            raise e
 
 if __name__ == '__main__':
     typer.run(beancount)
