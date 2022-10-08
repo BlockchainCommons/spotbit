@@ -531,6 +531,7 @@ class Script(Token):
 
 async def make_beancount_file_for(
     descriptor: Descriptor, 
+    account_name: str,
     currency:   str, 
     network:    bdk.Network,
     spotbit:    Spotbit):
@@ -673,7 +674,7 @@ async def make_beancount_file_for(
     if beancount_document:
         from beancount.scripts import format
         formatted_document = format.align_beancount(beancount_document)
-        filename  = format_filename(parsed_descriptor)   # TODO(nochiel)
+        filename  = format_filename(parsed_descriptor, account_name)   # TODO(nochiel)
         assert filename
         _logger.info(f'Writing beancount report to: {filename}')
         with open(filename, mode = 'w') as file:
@@ -742,10 +743,11 @@ class ParsedDescriptor:
             if data[0] == '[':
                 _logger.debug('Parsing fingerprint.')
                 cursor = data.find(']')
-                hierarchy = data[1 : cursor]
-                end_fingerprint = hierarchy.find('/')
-                self.fingerprint = hierarchy[: end_fingerprint]
-                self.account = Account(data[1 : cursor])
+                self.fingerprint = data[1 : cursor]
+                # hierarchy = data[1 : cursor]
+                # end_fingerprint = hierarchy.find('/')
+                # self.fingerprint = hierarchy[: end_fingerprint]
+                # self.account = Account(data[1 : cursor])
                 cursor += 1
 
             key_data = data[cursor:] or None
@@ -865,7 +867,7 @@ class ParsedDescriptor:
                         result = DescriptorType.NESTED 
         return result
 
-def format_filename(descriptor: ParsedDescriptor) -> str:
+def format_filename(descriptor: ParsedDescriptor, account_name: str) -> str:
     # TODO Format this according to BlockchainCommons standards.
     # Ref. https://github.com/BlockchainCommons/Research/blob/master/Investigation/Files.md
     # 'Seed Id - Key ID - HDKey from Seed Name - Type - [Master Fingprint _ Descriptor Type _ Account # _  Descriptor Checksum] - Format.filetype'
@@ -889,11 +891,16 @@ def format_filename(descriptor: ParsedDescriptor) -> str:
     descriptor_type = descriptor.get_address_type().value
 
     account_number = descriptor.account.get_account_number() if descriptor.account else 0 
+    # result = (
+    #         f'{key_id}-'
+    #         f'HDKey from {seedname}-'
+    #         f'{document_type}-'
+    #         f'[{descriptor.fingerprint}_{account_number}_{descriptor_type}_{descriptor.checksum}]'
+    #         '.bean'
+    #         )
     result = (
-            f'{key_id}-'
-            f'HDKey from {seedname}-'
-            f'{document_type}-'
-            f'[{descriptor.fingerprint}_{account_number}_{descriptor_type}_{descriptor.checksum}]'
+            f'{account_name}_'
+            f'{descriptor.checksum}'
             '.bean'
             )
 
@@ -908,6 +915,7 @@ from lib import Network
 def beancount(
         spotbit_url: str,
         descriptor:  Descriptor,
+        name:        str, # TODO(nochiel) Document this.
         network:     Network = Network.TESTNET,
         currency:    str = 'USD',
         verbose:     bool = False):
@@ -933,7 +941,7 @@ def beancount(
        _logger.debug('Starting')
        _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
        result = asyncio.run(
-               make_beancount_file_for(descriptor, currency, bdk_network, spotbit), 
+               make_beancount_file_for(descriptor, name, currency, bdk_network, spotbit), 
                # debug = True
                )
        result = result.result() if result else None
