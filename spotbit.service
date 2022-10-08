@@ -4,9 +4,9 @@ Requires=tor.service
 After=tor.service
 
 [Service]
-WorkingDirectory=/home/spotbit/source
-ExecStart=/usr/local/bin/python3 /home/spotbit/source/server.py
 User=spotbit
+WorkingDirectory=/home/spotbit/spotbit
+ExecStart=/home/spotbit/spotbit/env/bin/python3 app.py
 Group=root
 Type=simple
 
