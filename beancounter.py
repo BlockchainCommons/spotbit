@@ -257,7 +257,7 @@ async def get_transactions(
 
     return result
 
-class CSVTransaction(BaseModel):
+class CSVFileTransaction(BaseModel):
     Date:    datetime
     Label:   str
     Value:   float
@@ -265,7 +265,12 @@ class CSVTransaction(BaseModel):
     Txid:     str
 
 @dataclass
-class TransactionDetails():
+class CSVTransaction:
+    csvFileTransaction: CSVFileTransaction
+    transaction:        Transaction
+
+@dataclass
+class TransactionDetails:
     transaction: bdk.TransactionDetails | CSVTransaction
     twap: float
 
@@ -274,17 +279,19 @@ class TransactionDetails():
         self.twap = twap
 
     def id(self) -> str:
+        result = '0xCAFEBABE'
         if isinstance(self.transaction, bdk.TransactionDetails):
             result = self.transaction.txid  
         elif isinstance(self.transaction, CSVTransaction):
-            result = self.transaction.Txid
+            result = self.transaction.csvFileTransaction.Txid
         return result
 
     def timestamp(self) -> datetime:
+        result = datetime.today()
         if isinstance(self.transaction, bdk.TransactionDetails):
             result = datetime.fromtimestamp(self.transaction.confirmation_time.timestamp)
         elif isinstance(self.transaction, CSVTransaction):
-            result = self.transaction.Date
+            result = self.transaction.csvFileTransaction.Date
 
         return result
 
@@ -295,10 +302,21 @@ class TransactionDetails():
         result = 0.0
         if isinstance(self.transaction, bdk.TransactionDetails):
             result = self.transaction.received - self.transaction.sent
+            result *= 1e-8
         elif isinstance(self.transaction, CSVTransaction):
-            result = self.transaction.Value
+            result = self.transaction.csvFileTransaction.Value
+
+        return result 
+
+    def fees(self) -> float:
+        result = 0.0
+        if isinstance(self.transaction, bdk.TransactionDetails):
+            result = self.transaction.fee 
+        elif isinstance(self.transaction, CSVTransaction):
+            result = self.transaction.transaction.fee
 
         return result * 1e-8
+
 
 async def make_transaction_details(
         transactions: list[bdk.TransactionDetails] | list[CSVTransaction],
@@ -315,7 +333,7 @@ async def make_transaction_details(
         dates = [datetime.fromtimestamp(t.confirmation_time.timestamp) 
                  for t in transactions]
     elif isinstance(transactions[0], CSVTransaction):
-        dates = [t.Date for t in transactions]
+        dates = [t.csvFileTransaction.Date for t in transactions]
 
     try:
         candles = spotbit.get_candles_at_dates(currency, dates)
@@ -338,8 +356,10 @@ async def make_transaction_details(
     return result
 
 def make_records(wallet, descriptor, *, 
-        transaction_details: list[TransactionDetails], 
-        currency: str
+                 account_name: str,
+                 balance = None,
+                 transaction_details: list[TransactionDetails], 
+                 currency: str
         ) -> str:
 
     # Ref. https://beancount.github.io/docs/beancount_language_syntax.html
@@ -349,15 +369,13 @@ def make_records(wallet, descriptor, *,
     # - Add postings to transactions.
     # - Dump the account to a file.
 
-    memo = f'# Transactions for {descriptor}\n'
-    if wallet.get_balance():
-        memo += f'# Balance: {wallet.get_balance().confirmed * 1e-8} BTC' 
+    memo    = f'; Transactions for {descriptor}\n'
             
     # Ref. beancount/realization.py
     type                = 'Assets'
     country             = ''
     institution         = ''
-    btc_account_name    = 'BTC'
+    btc_account_name    = 'Bitcoin'
     fiat_account_name   = currency
     subaccount_name     = ''
 
@@ -368,9 +386,24 @@ def make_records(wallet, descriptor, *,
     btc_account = account.join(*components)
     assert account.is_valid(btc_account), f'Account name is not valid. Got: {btc_account}'
 
+    # Titles and options
+    '''
+    * Options
+
+    option "title" "Blockhain Commons - Bitcoin Sponsors Journal"
+    option "operating_currency" "USD"
+    option "inferred_tolerance_default" "USD:0.01"
+    option "inferred_tolerance_default" "BTC:0.000000001"
+    '''
+    options_directive = (
+            f'option "title" "{account_name}"\n'
+            f'option "operating_currency" "USD"\n' 
+            f'option "inferred_tolerance_default" "USD:0.01"\n'
+            f'option "inferred_tolerance_default" "BTC:0.000000001"\n\n')
+
     # TODO FINDOUT We treat cash as a liability. Is this the best way?
     # Store the exchange rate at each transaction date.
-    components = ['liabilities'.title(), 'Cash', fiat_account_name, subaccount_name]
+    components = ['liabilities'.title(), 'Cash']
     components = [c for c in components if c != '']
     fiat_account = account.join(*components)
     assert account.is_valid(fiat_account), f'Account name is not valid. Got: {fiat_account}'
@@ -393,12 +426,18 @@ def make_records(wallet, descriptor, *,
 
     # Account directive
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
+    TransactionFeesAccount = 'Expenses:TransactionFees'
     account_directives = [
-            f'{date_of_account_open.date()} open {btc_account}\tBTC',
-            f'{date_of_account_open.date()} open {fiat_account}\t{currency}',
+            f'{date_of_account_open.date()} open {btc_account}\t\tBTC',
+            f'{date_of_account_open.date()} open {TransactionFeesAccount}\tBTC',
+            f'{date_of_account_open.date()} open {fiat_account}\t\t{currency}',
             ]
 
-    # TODO(nochiel) Order transactions by date. For each date record a btc price.
+    balance = balance if balance else wallet.get_balance().confirmed 
+    # 2012-12-26 balance Liabilities:US:CreditCard   -3492.02 USD
+    balance_assertion    = f'{transaction_details[-1].timestamp().date()} balance {btc_account} {balance:.8f} BTC\n\n' 
+
+    # TODO(nochiel) For each date record a btc price.
     # e.g. 2015-04-30 price AAPL 125.15 USD
     btc_price_directive = ''
 
@@ -459,22 +498,32 @@ def make_records(wallet, descriptor, *,
         tags = [] 
         links = []
 
-        transaction_title_directive = f'{date} * "Transaction hash: {detail.id()}"'
-        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
-        # FIXME(nochiel) Add cost basis.
-        btc_amount_directive += f' @ {detail.twap :.2f} {currency}\t' 
+        transaction_title_directive = f'{date} * "PAYEE" "NARRATION"\t; https://blockstream.info/tx/{detail.id()}'
+        # FIXME(nochiel) Add cost basis if possible.
+        price_annotation = f' @ {detail.twap :.2f} {currency}\t\n' 
+        if detail.amount() < 0:
+            btc_amount_directive = f'\t{btc_account}\t{detail.amount() + detail.fees() :.8f} BTC' 
+            btc_amount_directive += price_annotation
+            btc_amount_directive += f'\t{TransactionFeesAccount}\t{- detail.fees():.8f} BTC'     
+            btc_amount_directive += price_annotation
+        else:
+            btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
+            btc_amount_directive += price_annotation
 
         fiat_amount = detail.twap * detail.amount() 
-        fiat_amount_directive = ( f'\t{fiat_account}\t' 
-                f'{-fiat_amount :.2f} {currency}\t')
-
+        # fiat_amount_directive = ( f'\t{fiat_account}\t' 
+        #         f'{-fiat_amount :.2f} {currency}\t')
+        fiat_amount_directive = f'\t{fiat_account}\t' 
         transaction_directive = transaction_title_directive + '\n' 
-        transaction_directive += btc_amount_directive + '\n' 
+        transaction_directive += btc_amount_directive
         transaction_directive += fiat_amount_directive + '\n'
         transaction_directives.append(transaction_directive)
 
     document = f'{memo}\n\n'
+    document += options_directive
     document += btc_commodity_directive
+    document += '\n'
+    document += balance_assertion
     document += '\n'
     document += str.join('\n', account_directives)
     document += '\n\n'
@@ -567,8 +616,13 @@ def get_transactions_from_csv(filename: str, network: bdk.Network) -> tuple[list
         r = csv.DictReader(f)
         for row in r:
             tx = get_tx(row['Txid'])
+            assert tx
             transactions.append(tx)
-            result.append(CSVTransaction.parse_obj(row))
+            csvTransaction = CSVTransaction(CSVFileTransaction.parse_obj(row), tx)
+            result.append(csvTransaction)
+
+    transactions.sort(key = lambda t: t.status.block_time)
+    result.sort(key = lambda t: t.csvFileTransaction.Date)
 
     return transactions, result
 
@@ -587,7 +641,6 @@ async def make_beancount_file_for(*,
     parsed_descriptor = ParsedDescriptor(descriptor)
     _logger.debug(f'{parsed_descriptor = }')
     retry = True
-    wallet = None
 
     def new_wallet(descriptor = descriptor, parsed_descriptor = parsed_descriptor) -> bdk.Wallet | None:
         wallet = None
@@ -616,80 +669,84 @@ async def make_beancount_file_for(*,
 
     wallet = new_wallet()
     if wallet:
-        '''
-        esplora = bdk.BlockchainConfig.ESPLORA(
-                bdk.EsploraConfig(
-                    base_url = get_esplora_api(network),
-                    proxy = None, 
-                    stop_gap = _GAP_SIZE,
-                    concurrency = 8,
-                    timeout = 500,))
-        '''
-        electrum = bdk.BlockchainConfig.ELECTRUM(
-                bdk.ElectrumConfig(
-                    url = get_electrum_api(network),
-                    socks5 = None,
-                    retry = 5,
-                    timeout = 100,
-                    stop_gap = _GAP_SIZE))
-        blockchain = bdk.Blockchain(electrum)
-
-        while retry:
-            try:
-                class Progress(bdk.Progress):
-                    def update(self, progress, message): 
-                        _logger.info(f'Syncing wallet: {progress}, {message}')
-
-                _logger.info('Attempting to sync wallet.')
-                wallet.sync(blockchain, Progress())
-                _logger.info('Wallet sync completed.')
-
-                bdk_sync_was_incomplete = (wallet.list_transactions() and wallet.get_balance().confirmed == 0)
-                if bdk_sync_was_incomplete:
-                    raise BDKIncompleteSyncError(f'{len(wallet.list_transactions()) = }, {wallet.get_balance().confirmed = }')
-
-                _logger.debug('Wallet sync successful.')
-                _logger.debug(f'{str(wallet.get_balance()) =}')
-
-                if not wallet.list_transactions():
-                    if len(parsed_descriptor.keys[0].paths) == 1:
-                        _logger.info('The descriptor has no paths. We will attempt to use a default path of "0/*" to create the wallet.')
-                        retry = True
-                        parsed_descriptor.keys[0].paths.extend(['0', '*'])
-                        descriptor = str(parsed_descriptor.external_descriptor)
-                        _logger.debug(f'{descriptor = }')
-                        continue
-
-                retry = False
-
-            except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
-                # FIXME(nochiel) We don't need to handle this here.
-                # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
-                retry = False
-                if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
-                    _logger.error(e)
-                    raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
-                raise Exception('Error while syncing wallet.', e) 
-
-        assert wallet
-
-        if not wallet.list_transactions():
-            _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
-            return
-
         if not csv_filename:
-            _logger.debug('Making transaction details from wallet.')
-            transaction_details  = await make_transaction_details(
-                    transactions = wallet.list_transactions(),
-                    currency     = currency,
-                    spotbit      = spotbit)
+            '''
+            esplora = bdk.BlockchainConfig.ESPLORA(
+                    bdk.EsploraConfig(
+                        base_url = get_esplora_api(network),
+                        proxy = None, 
+                        stop_gap = _GAP_SIZE,
+                        concurrency = 8,
+                        timeout = 500,))
+            '''
+            electrum = bdk.BlockchainConfig.ELECTRUM(
+                    bdk.ElectrumConfig(
+                        url = get_electrum_api(network),
+                        socks5 = None,
+                        retry = 5,
+                        timeout = 100,
+                        stop_gap = _GAP_SIZE))
+            blockchain = bdk.Blockchain(electrum)
+
+            while retry:
+                try:
+                    class Progress(bdk.Progress):
+                        def update(self, progress, message): 
+                            _logger.info(f'Syncing wallet: {progress}, {message}')
+
+                    _logger.info('Attempting to sync wallet.')
+                    wallet.sync(blockchain, Progress())
+                    _logger.info('Wallet sync completed.')
+
+                    bdk_sync_was_incomplete = (wallet.list_transactions() and wallet.get_balance().confirmed == 0)
+                    if bdk_sync_was_incomplete:
+                        raise BDKIncompleteSyncError(f'{len(wallet.list_transactions()) = }, {wallet.get_balance().confirmed = }')
+
+                    _logger.debug('Wallet sync successful.')
+                    _logger.debug(f'{str(wallet.get_balance()) =}')
+
+                    if not wallet.list_transactions():
+                        if len(parsed_descriptor.keys[0].paths) == 1:
+                            _logger.info('The descriptor has no paths. We will attempt to use a default path of "0/*" to create the wallet.')
+                            retry = True
+                            parsed_descriptor.keys[0].paths.extend(['0', '*'])
+                            descriptor = str(parsed_descriptor.external_descriptor)
+                            _logger.debug(f'{descriptor = }')
+                            continue
+
+                    retry = False
+
+                except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
+                    # FIXME(nochiel) We don't need to handle this here.
+                    # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
+                    retry = False
+                    if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
+                        _logger.error(e)
+                        raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
+                    raise Exception('Error while syncing wallet.', e) 
+
+            assert wallet
+
+            if not wallet.list_transactions():
+                _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
+                return
+
+            if not csv_filename:
+                _logger.debug('Making transaction details from wallet.')
+                transaction_details  = await make_transaction_details(
+                        transactions = wallet.list_transactions(),
+                        currency     = currency,
+                        spotbit      = spotbit)
+
+    balance = wallet.get_balance().confirmed * 1e-8  if wallet else 0
 
     if csv_filename:
         _logger.debug('Making transaction details from csv file.')
         # TODO(nochiel) allow the user to specify a csv exported from sparrow wallet from which to import transactions.
         transactions, csv_rows = get_transactions_from_csv(csv_filename, network)
-        transactions.sort(key = lambda t: t.status.block_time)
         transaction_details = await make_transaction_details(csv_rows, currency, spotbit)
+        balance = csv_rows[-1].csvFileTransaction.Balance
+
 
     assert transaction_details, Exception('No transaction details.')
 
@@ -697,8 +754,10 @@ async def make_beancount_file_for(*,
 
     _logger.debug('Making beancount file.')
     beancount_document = make_records(wallet, descriptor, 
+            account_name = account_name,
             transaction_details = transaction_details, 
-            currency            = currency)
+            currency            = currency,
+            balance = balance)
 
     if not beancount_document:
         raise Exception('The beancount file was not generated')
