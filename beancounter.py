@@ -428,18 +428,19 @@ def make_records(wallet, descriptor, *,
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     TransactionFeesAccount = 'Expenses:TransactionFees'
     account_directives = [
-            f'{date_of_account_open.date()} open {btc_account}\t\tBTC',
+            f'{date_of_account_open.date()} open {btc_account}\t\t\tBTC',
             f'{date_of_account_open.date()} open {TransactionFeesAccount}\tBTC',
             f'{date_of_account_open.date()} open {fiat_account}\t\t{currency}',
             ]
 
     balance = balance if balance else wallet.get_balance().confirmed 
     # 2012-12-26 balance Liabilities:US:CreditCard   -3492.02 USD
+    # FIXME(nochiel) This needs to be correct when we file taxes for a single financial year.
     balance_assertion    = f'{transaction_details[-1].timestamp().date()} balance {btc_account} {balance:.8f} BTC\n\n' 
 
-    # TODO(nochiel) For each date record a btc price.
+    # TODO(nochiel) For each date record a btc price. Is this necessary?
     # e.g. 2015-04-30 price AAPL 125.15 USD
-    btc_price_directive = ''
+    # btc_price_directive = ''
 
     # Transactions and entries. e.g.
     '''
@@ -455,30 +456,6 @@ def make_records(wallet, descriptor, *,
     # TODO Create an Asset:BTC and Asset:Cash account
     # The Asset:Cash is equivalent to Asset:BTC but in USD exchange rates at the time of transaction.
     # Because BTC is volatile, we should list transaction time.
-
-    class Payee:
-        def __init__(self, address: str, amount: int):
-            self.address = address
-            self.amount = amount    # satoshis
-
-    Transaction = dict
-
-    def get_payees(
-            transaction: Transaction,
-           ) -> list[Payee]:
-
-        assert Transaction
-
-        result = []
-
-        outputs = transaction['vout']
-        result = [Payee(address = output['scriptpubkey_address'], amount = output['value']) 
-                for output in outputs]
-
-        return result
-
-    assert transaction_details
-    # _logger.debug(f'transaction_details = }')
 
     transaction_directives = []
     for detail in transaction_details:
@@ -498,22 +475,22 @@ def make_records(wallet, descriptor, *,
         tags = [] 
         links = []
 
-        transaction_title_directive = f'{date} * "PAYEE" "NARRATION"\t; https://blockstream.info/tx/{detail.id()}'
-        # FIXME(nochiel) Add cost basis if possible.
+        payee = 'CUSTOMER' if detail.amount() < 0 else 'VENDOR'
         price_annotation = f' @ {detail.twap :.2f} {currency}\t\n' 
+        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
+        btc_amount_directive += price_annotation
+
+        # FIXME(nochiel) Add cost basis for a transaction posting if it becomes necessary/useful/possible.
         if detail.amount() < 0:
-            btc_amount_directive = f'\t{btc_account}\t{detail.amount() + detail.fees() :.8f} BTC' 
+            btc_amount_directive += f'\t{TransactionFeesAccount}\t{detail.fees():.8f} BTC'     
             btc_amount_directive += price_annotation
-            btc_amount_directive += f'\t{TransactionFeesAccount}\t{- detail.fees():.8f} BTC'     
-            btc_amount_directive += price_annotation
-        else:
-            btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
-            btc_amount_directive += price_annotation
+
+        transaction_title_directive = f'{date} * "{payee}" "NARRATION"\t; https://blockstream.info/tx/{detail.id()}'
 
         fiat_amount = detail.twap * detail.amount() 
         # fiat_amount_directive = ( f'\t{fiat_account}\t' 
         #         f'{-fiat_amount :.2f} {currency}\t')
-        fiat_amount_directive = f'\t{fiat_account}\t' 
+        fiat_amount_directive = f'\t{fiat_account}\t' # Beancount will infer this entry.
         transaction_directive = transaction_title_directive + '\n' 
         transaction_directive += btc_amount_directive
         transaction_directive += fiat_amount_directive + '\n'
@@ -523,8 +500,7 @@ def make_records(wallet, descriptor, *,
     document += options_directive
     document += btc_commodity_directive
     document += '\n'
-    document += balance_assertion
-    document += '\n'
+    # document += balance_assertion + '\n'
     document += str.join('\n', account_directives)
     document += '\n\n'
     document += str.join('\n', transaction_directives)
@@ -633,7 +609,7 @@ async def make_beancount_file_for(*,
                                   account_name: str = '',
                                   csv_filename: str = '',
                                   currency:   str = 'USD', 
-        ) :
+                                  years:     list[datetime]):
 
     transaction_details = []
     bdk_sync_was_incomplete = False
@@ -740,37 +716,50 @@ async def make_beancount_file_for(*,
 
     balance = wallet.get_balance().confirmed * 1e-8  if wallet else 0
 
+    all_transaction_details = []
     if csv_filename:
         _logger.debug('Making transaction details from csv file.')
         # TODO(nochiel) allow the user to specify a csv exported from sparrow wallet from which to import transactions.
         transactions, csv_rows = get_transactions_from_csv(csv_filename, network)
-        transaction_details = await make_transaction_details(csv_rows, currency, spotbit)
+        all_transaction_details = await make_transaction_details(csv_rows, currency, spotbit)
         balance = csv_rows[-1].csvFileTransaction.Balance
 
+    @dataclass
+    class BeanDocument:
+        filename: str
+        document: str
 
-    assert transaction_details, Exception('No transaction details.')
+    documents = []
+    for year in years:
+        transaction_details = list(filter(lambda td: td.timestamp().year == year.year, 
+                                          all_transaction_details))
+        assert transaction_details, Exception('No transaction details.')
 
-    # _logger.debug(f'{transaction_details = }')
+        _logger.debug('Making beancount file.')
+        beancount_document = make_records(wallet, descriptor, 
+                account_name = account_name,
+                transaction_details = transaction_details, 
+                currency            = currency,
+                balance = balance)
 
-    _logger.debug('Making beancount file.')
-    beancount_document = make_records(wallet, descriptor, 
-            account_name = account_name,
-            transaction_details = transaction_details, 
-            currency            = currency,
-            balance = balance)
+        if not beancount_document:
+            raise Exception('The beancount file was not generated')
+
+        _logger.debug('Writing beancount file.')
+        if beancount_document:
+            from beancount.scripts import format
+            formatted_document = format.align_beancount(beancount_document)
+            filename  = format_filename(parsed_descriptor, account_name, year)   
+            assert filename
+            _logger.info(f'Writing beancount report to: {filename}')
+            with open(filename, mode = 'w') as file:
+                file.write(formatted_document)
+
+            documents.append(BeanDocument(filename, beancount_document))
 
     if not beancount_document:
         raise Exception('The beancount file was not generated')
 
-    _logger.debug('Writing beancount file.')
-    if beancount_document:
-        from beancount.scripts import format
-        formatted_document = format.align_beancount(beancount_document)
-        filename  = format_filename(parsed_descriptor, account_name)   # TODO(nochiel)
-        assert filename
-        _logger.info(f'Writing beancount report to: {filename}')
-        with open(filename, mode = 'w') as file:
-            file.write(formatted_document)
 
 class DescriptorType(Enum):
     '''
@@ -959,7 +948,7 @@ class ParsedDescriptor:
                         result = DescriptorType.NESTED 
         return result
 
-def format_filename(descriptor: ParsedDescriptor, account_name: str) -> str:
+def format_filename(descriptor: ParsedDescriptor, account_name: str, year: datetime) -> str:
     # TODO Format this according to BlockchainCommons standards.
     # Ref. https://github.com/BlockchainCommons/Research/blob/master/Investigation/Files.md
     # 'Seed Id - Key ID - HDKey from Seed Name - Type - [Master Fingprint _ Descriptor Type _ Account # _  Descriptor Checksum] - Format.filetype'
@@ -992,6 +981,7 @@ def format_filename(descriptor: ParsedDescriptor, account_name: str) -> str:
     #         '.bean'
     #         )
     result = (
+            f'{year.year}_'
             f'{account_name}_'
             f'{descriptor.checksum}'
             '.bean'
@@ -1009,7 +999,8 @@ from typing import Optional
 def beancount(
         spotbit_url: str,
         descriptor:  Descriptor,
-        year:        datetime = datetime.today(),
+        year:        list[datetime] = typer.Option([datetime(year = 2022, month = 1, day = 1)], 
+                                                     formats = ['%Y']),
         name:        Optional[str] = None, # TODO(nochiel) Document this.
         csv:         Optional[str] = None,
         network:     Network = Network.TESTNET,
@@ -1038,6 +1029,7 @@ def beancount(
                make_beancount_file_for(descriptor = descriptor, 
                                        account_name = name if name else 'Tax report', 
                                        csv_filename = csv if csv else '',
+                                       years = year,
                                        currency = currency, 
                                        network = bdk_network, 
                                        spotbit = spotbit), 
