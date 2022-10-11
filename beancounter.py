@@ -355,6 +355,10 @@ async def make_transaction_details(
     result.sort(key = lambda t: t.timestamp())
     return result
 
+
+transaction_fees_account = 'Expenses:TransactionFees'
+btc_account = 'Assets:Bitcoin' 
+fiat_account = 'Liabilities:Cash'
 def make_records(wallet, descriptor, *, 
                  account_name: str,
                  balance = None,
@@ -386,21 +390,6 @@ def make_records(wallet, descriptor, *,
     btc_account = account.join(*components)
     assert account.is_valid(btc_account), f'Account name is not valid. Got: {btc_account}'
 
-    # Titles and options
-    '''
-    * Options
-
-    option "title" "Blockhain Commons - Bitcoin Sponsors Journal"
-    option "operating_currency" "USD"
-    option "inferred_tolerance_default" "USD:0.01"
-    option "inferred_tolerance_default" "BTC:0.000000001"
-    '''
-    options_directive = (
-            f'option "title" "{account_name}"\n'
-            f'option "operating_currency" "USD"\n' 
-            f'option "inferred_tolerance_default" "USD:0.01"\n'
-            f'option "inferred_tolerance_default" "BTC:0.000000001"\n\n')
-
     # TODO FINDOUT We treat cash as a liability. Is this the best way?
     # Store the exchange rate at each transaction date.
     components = ['liabilities'.title(), 'Cash']
@@ -419,23 +408,24 @@ def make_records(wallet, descriptor, *,
       asset-class: "cash"
     '''
     btc_commodity_directive = (
-            '2008-10-31 commodity BTC\n'
-            '  name: "Bitcoin"\n'
-            '  asset-class: "cryptocurrency"\n'
+            ';  2008-10-31 commodity BTC\n'
+            ';    name: "Bitcoin"\n'
+            ';    asset-class: "cryptocurrency"\n'
             )
 
     # Account directive
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
-    TransactionFeesAccount = 'Expenses:TransactionFees'
     account_directives = [
-            f'{date_of_account_open.date()} open {btc_account}\t\t\tBTC',
-            f'{date_of_account_open.date()} open {TransactionFeesAccount}\tBTC',
-            f'{date_of_account_open.date()} open {fiat_account}\t\t{currency}',
+            f'; {date_of_account_open.date()} open {btc_account}\t\t\tBTC',
+            f'; {date_of_account_open.date()} open {transaction_fees_account}\tBTC',
+            f'; {date_of_account_open.date()} open {fiat_account}\t\t{currency}',
             ]
 
     balance = balance if balance else wallet.get_balance().confirmed 
     # 2012-12-26 balance Liabilities:US:CreditCard   -3492.02 USD
     # FIXME(nochiel) This needs to be correct when we file taxes for a single financial year.
+    # TODO(nochiel) If using a `main.bean´ file which includes separate yearly account files,
+    # put the balance assertion in the ´main.bean´.
     balance_assertion    = f'{transaction_details[-1].timestamp().date()} balance {btc_account} {balance:.8f} BTC\n\n' 
 
     # TODO(nochiel) For each date record a btc price. Is this necessary?
@@ -482,7 +472,7 @@ def make_records(wallet, descriptor, *,
 
         # FIXME(nochiel) Add cost basis for a transaction posting if it becomes necessary/useful/possible.
         if detail.amount() < 0:
-            btc_amount_directive += f'\t{TransactionFeesAccount}\t{detail.fees():.8f} BTC'     
+            btc_amount_directive += f'\t{transaction_fees_account}\t{detail.fees():.8f} BTC'     
             btc_amount_directive += price_annotation
 
         transaction_title_directive = f'{date} * "{payee}" "NARRATION"\t; https://blockstream.info/tx/{detail.id()}'
@@ -497,23 +487,12 @@ def make_records(wallet, descriptor, *,
         transaction_directives.append(transaction_directive)
 
     document = f'{memo}\n\n'
-    document += options_directive
     document += btc_commodity_directive
     document += '\n'
     # document += balance_assertion + '\n'
     document += str.join('\n', account_directives)
     document += '\n\n'
     document += str.join('\n', transaction_directives)
-
-    # Validate document
-    from beancount import loader
-    _, errors, _ = loader.load_string(document)
-    if errors:
-        _logger.error(f'---{len(errors)} Errors in the generated beancount file---')
-        for i, error in enumerate(errors):
-            _logger.error(f'{i}: {error}')
-            _logger.error('--')
-        _logger.error('---End of errors in beancount file---')
 
     return document
 
@@ -729,6 +708,24 @@ async def make_beancount_file_for(*,
         filename: str
         document: str
 
+        def write(self):
+            if self.document:
+                from beancount.scripts import format
+                formatted_document = format.align_beancount(self.document)
+                with open(self.filename, mode = 'w') as file:
+                    file.write(formatted_document)
+
+        def validate(self):
+            # Validate document
+            from beancount import loader
+            _, errors, _ = loader.load_string(self.document)
+            if errors:
+                _logger.error(f'---{len(errors)} Errors in "{self.filename}"---')
+                for i, error in enumerate(errors):
+                    _logger.error(f'{i}: {error}')
+                    _logger.error('--')
+                _logger.error('---End of errors in beancount file---')
+
     documents = []
     for year in years:
         transaction_details = list(filter(lambda td: td.timestamp().year == year.year, 
@@ -746,19 +743,70 @@ async def make_beancount_file_for(*,
             raise Exception('The beancount file was not generated')
 
         _logger.debug('Writing beancount file.')
-        if beancount_document:
-            from beancount.scripts import format
-            formatted_document = format.align_beancount(beancount_document)
-            filename  = format_filename(parsed_descriptor, account_name, year)   
-            assert filename
-            _logger.info(f'Writing beancount report to: {filename}')
-            with open(filename, mode = 'w') as file:
-                file.write(formatted_document)
+        document = BeanDocument(f'reports/{year.year}/{format_filename(parsed_descriptor, account_name, year)}',
+                                beancount_document)
+        if document:
+            document.write()
+            documents.append(document)
 
-            documents.append(BeanDocument(filename, beancount_document))
+    # TODO Put common headers in main file.
+    main_file = '''option "title" "Blockchain Commons - Combined Journals"
 
-    if not beancount_document:
-        raise Exception('The beancount file was not generated')
+; =================
+; OPTIONS
+; =================
+
+; USD Currency related options
+
+2019-01-01 commodity USD
+  name: "United States Dollar"
+  asset-class: "cash"
+        
+2008-10-31 commodity BTC
+  name: "Bitcoin"
+  asset-class: "cryptocurrency"
+
+option "operating_currency" "USD"
+
+option "inferred_tolerance_default" "USD:0.01"
+
+; BTC Currency Related options
+
+option "inferred_tolerance_default" "BTC:0.000000001"
+
+option "booking_method" "LIFO"
+2000-01-01 custom "fava-extension" "fava_investor" "{}"
+
+'''
+
+    def make_include_directives(documents):
+        # E.g include "./2022/bc-2022-bitcoin-sponsors-7hramevw.bean"
+        result = []
+        for d in documents:
+            result.append(f'include "{d.filename}"') # FIXME(nochiel)
+        return result
+
+    def make_main_headers():
+        result = ''
+
+        # Account directive
+        # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
+        date_of_account_open = all_transaction_details[0].timestamp()
+        account_directives = [
+                f'{date_of_account_open.date()} open Assets:Bitcoin\t\tBTC',
+                f'{date_of_account_open.date()} open {transaction_fees_account}\tBTC',
+                f'{date_of_account_open.date()} open {fiat_account}\t\t{currency}',
+                ]
+        result = str.join('\n', account_directives) + '\n'
+
+        return result
+
+    main_file += make_main_headers()
+    main_file += '\n'
+    main_file += str.join('\n', make_include_directives(documents))
+    main_document = BeanDocument('reports/main.bean', main_file)
+    main_document.write()
+    main_document.validate()
 
 
 class DescriptorType(Enum):
