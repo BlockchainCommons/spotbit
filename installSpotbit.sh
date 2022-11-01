@@ -297,6 +297,7 @@ fi
 ####
 # 4. Install latest stable tor
 ####
+# FIXME(nochiel) Install Tor gpg keys correctly.
 
 # Download tor
 echo "
@@ -392,6 +393,8 @@ fi
 ####
 # 5. Install python & python dependencies
 ####
+# FIXME(nochiel) Get python3.10 from apt.
+# Ref.https://www.linode.com/docs/guides/how-to-install-python-on-debian-10/ 
 if "$INSTALL_PYTHON310"; then
   echo "
   ----------------
@@ -421,7 +424,8 @@ echo "
 $MESSAGE_PREFIX Installing python dependencies
 ----------------
 "
-python3.10 -m pip install -r requirements.txt
+python3.10 -m venv env
+env/bin/python3 -m pip install -r requirements.txt
 
 cd "$SCRIPTS_DIR"
 
@@ -508,3 +512,5 @@ OR on it's onion(Tor) address (located at /var/lib/tor/spotbit/hostname):
 $SPOTBIT_ONION
 *******************************************************************************
 "
+
+# TODO(nochiel) Install and configure caddy.
