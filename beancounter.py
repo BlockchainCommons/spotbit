@@ -33,10 +33,22 @@ from lib import Candle
 
 import logging
 
+_GAP_SIZE = 100
+
+class BDKIncompleteSyncError(Exception):
+    pass
+
+class TimedOutError(Exception):
+    pass
+
+class WalletCreationError(Exception):
+    pass
+
 def get_logger(verbose = False):
 
     import logging
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
     if verbose:
         logger.setLevel(logging.DEBUG)
 
@@ -70,13 +82,22 @@ class Spotbit:
 
         result = None
 
-        request = f'{self.url}/api/history/{currency}'
+        request = f'{self.url}/api/history/{currency}?exchange=ftx'
         body    = [dt.isoformat() for dt in dates]
         response = requests.post(request, json = body)
         if response.status_code == 200:
             result = [Candle(**data) for data in response.json()]
+        else:
+            raise HTTPException(detail = response.json() , status_code = response.status_code)
 
         return result
+
+def get_electrum_api(network: bdk.Network) -> str:
+    '''
+    https://github.com/spesmilo/electrum/blob/master/electrum/servers.json
+    '''
+    result = f'ssl://electrum.blockstream.info:{(port := 50002 if network == bdk.Network.BITCOIN else 50001)}'
+    return result
 
 def get_esplora_api(network: bdk.Network) -> str:
     ESPLORA_API_MAINNET = 'https://blockstream.info/api/'
@@ -90,192 +111,214 @@ def get_esplora_api(network: bdk.Network) -> str:
             result = ESPLORA_API_TESTNET
     return result
 
-_GAP_SIZE = 1_000    
-
 Descriptor = str
-Address = str
-Transactions = list[dict]
+Address = str   # 'tb1qsjc5mvv2nexal0sltadgx36jdwk88tps0x3eyt'
+Txid = str
+
+class ScriptPub(BaseModel):
+    scriptpubkey: str
+    scriptpubkey_asm: str
+    scriptpubkey_type: str
+    scriptpubkey_address: Address 
+    value: int
+
+class Transaction(BaseModel):
+
+    class Vin(BaseModel):
+        txid: Txid
+        vout: int
+        prevout: ScriptPub
+        scriptsig: str
+        scriptsig_asm: str
+
+    class Vout(BaseModel):
+        txid: Txid
+        vout: int
+        prevout: ScriptPub
+        scriptsig: str
+        sigasm: str
+
+    class TransactionStatus(BaseModel):
+        confirmed: bool
+        block_height: int
+        block_hash: str
+        block_time: datetime 
+
+    txid: Txid
+    version: int
+    locktime: int
+    vin: list[Vin]
+    vout: list[ScriptPub] 
+    size: int
+    weight: int
+    fee: int
+    status: TransactionStatus
 
 async def get_transactions(
-    addresses: list[Address],
+    addresses: list[bdk.AddressInfo],
     network:   bdk.Network
-    ) -> dict[Address, Transactions]:
+    ) ->list[Transaction]:
+    # FIXME(nochiel) Receiving transactions can be obtained by using external/receiving addresses.
+    # FIXME(nochiel) But how to we get spending transactions when bdkpython
+    # doesn't allow us to see internal addresses?
+    # TEST(nochiel) Check if any of the transactions we retrieve are receiving transactions.
+    # My hypothesis is that none of them will ever be. If so then we have to figure out a way
+    # to find out receiving transactions.
 
     result = []
 
     '''
     # Example of result: 
 
-     transactions = [[{'txid': '8668ded4e71c1e72a82b0746b075737e23975966ba67538ecb01c515cb5afbec',
-         'version': 1,
-         'locktime' : 0,
-         'vin': [{'txid': '2189a075f7d1c53b8af1b58638c639ff4c0a85e72ebb0527aebbebff5d380127',
-             'vout': 1,
-             'prevout': {'scriptpubkey': '001484b14db18a9e4ddfbe1f5f5a8347526bac73ac30',
-                 'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 84b14db18a9e4ddfbe1f5f5a8347526bac73ac30',
-                 'scriptpubkey_type': 'v0_p2wpkh',
-                 'scriptpubkey_address': 'tb1qsjc5mvv2nexal0sltadgx36jdwk88tps0x3eyt',
-                 'value': 21000},
-             'scriptsig': '',
-             'scriptsig_asm': '',
+     transactions = [[
+         {
+             'txid': '8668ded4e71c1e72a82b0746b075737e23975966ba67538ecb01c515cb5afbec',
+             'version': 1,
+             'locktime' : 0,
+             'vin': [
+                 {
+                     'txid': '2189a075f7d1c53b8af1b58638c639ff4c0a85e72ebb0527aebbebff5d380127',
+                     'vout': 1,
+                     'prevout': {
+                         'scriptpubkey': '001484b14db18a9e4ddfbe1f5f5a8347526bac73ac30',
+                         'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 84b14db18a9e4ddfbe1f5f5a8347526bac73ac30',
+                         'scriptpubkey_type': 'v0_p2wpkh',
+                         'scriptpubkey_address': 'tb1qsjc5mvv2nexal0sltadgx36jdwk88tps0x3eyt',
+                         'value': 21000
+                         },
+                     'scriptsig': '',
+                     'scriptsig_asm': '',
 
-             'witness': ['3045022100c839c17d9aceecf47c7da9e1e3aeed02c0eea37d523d2cf3d6af47303286a87102205c402c5b596f76ed0f58ea64a1a209949d6c23d331edb19d23c31c4f3e966c7b01',
-                 '03933ebadaaea3f4337a72213637b84acfa9162e9f00cf36d7bc477cc2d6b1efa7'],
-             'is_coinbase': False,
-             'sequence': 4294967295}],
-         'v out': [{'scriptpubkey': '00141dd1d071e262680535e87384fab9edbbf1ccdee0',
-             'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 1dd 1d071e262680535e87384fab9edbbf1ccdee0',
-             'scriptpubkey_type': 'v0_p2wpkh',
-             'scriptpubkey_address': 'tb1qrhgaqu0zvf5q2d0gwwz04w0dh0cuehhqwtcvz8',
-             'value': 8000},
-             {'scriptpubkey': '0014e3f594c8df944673bf7f9cfa2d473ce31f86dbeb',
-                 'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 e3f594c8df944673bf7f9cfa2d473ce31f86dbeb',
-                 'scriptpubkey_type': 'v0_p2wpkh',
-                 'scriptpubkey_address': 'tb1qu06efjxlj3r880mlnnaz63euuv0cdklthjt87j',
-                 'value': 12859}],
-             'size': 223,
-             'weight': 562,
-             'fee': 141,
-             'status': {'confirmed': True,
-                 'block_height': 2140276,
-                 'block_hash': '0000000000000032998e909cd91a11c4e540b0ef6c463c7ab41d834874f8f403',
-                 'block_time': 1644374701}}]]
-        '''
+                     'witness': ['3045022100c839c17d9aceecf47c7da9e1e3aeed02c0eea37d523d2cf3d6af47303286a87102205c402c5b596f76ed0f58ea64a1a209949d6c23d331edb19d23c31c4f3e966c7b01',
+                         '03933ebadaaea3f4337a72213637b84acfa9162e9f00cf36d7bc477cc2d6b1efa7'],
+                     'is_coinbase': False,
+                     'sequence': 4294967295}],
+                 'vout': [
+                     {
+                         'scriptpubkey': '00141dd1d071e262680535e87384fab9edbbf1ccdee0',
+                         'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 1dd 1d071e262680535e87384fab9edbbf1ccdee0',
+                         'scriptpubkey_type': 'v0_p2wpkh',
+                         'scriptpubkey_address': 'tb1qrhgaqu0zvf5q2d0gwwz04w0dh0cuehhqwtcvz8',
+                         'value': 8000
+                         },
+                     {
+                         'scriptpubkey': '0014e3f594c8df944673bf7f9cfa2d473ce31f86dbeb',
+                         'scriptpubkey_asm': 'OP_0 OP_PUSHBYTES_20 e3f594c8df944673bf7f9cfa2d473ce31f86dbeb',
+                         'scriptpubkey_type': 'v0_p2wpkh',
+                         'scriptpubkey_address': 'tb1qu06efjxlj3r880mlnnaz63euuv0cdklthjt87j',
+                         'value': 12859}
+                     ],
+                 'size': 223,
+                 'weight': 562,
+                 'fee': 141,
+                 'status': {'confirmed': True,
+                     'block_height': 2140276,
+                     'block_hash': '0000000000000032998e909cd91a11c4e540b0ef6c463c7ab41d834874f8f403',
+                     'block_time': 1644374701}
+                 }
+         ]]
+    '''
 
-    def get_transactions_for(address: Address) -> dict[Address, Transactions]:
+    def get_transactions_for(address: bdk.AddressInfo) -> list[Transaction]:
         # FIXME(nochiel) Don't include unconfirmed transactions.
+        from pydantic import parse_obj_as
+        _logger.debug(f'{address = }')
 
-        # _logger.debug(address)
-
-        result = {address: []}
-
+        result = []
         wait = 4
         while wait > 0:
-
             try:
-                request = f'{get_esplora_api(network)}/address/{address}/txs'
+                request = f'{get_esplora_api(network)}/address/{address.address}/txs'
                 response = requests.get(request)
                 wait = 0
                 if response.status_code == 200: 
-                    result[address] = response.json()
-                    # _logger.debug(result)
+                    _logger.debug(f'{response.json() = }')
+                    if response.json():
+                        _logger.debug(f'{address.address =}\n{response.json() = }')
+                        data = parse_obj_as(list[Transaction], response.json())
+                        result.extend(data)
                 else:
-                    _logger.error(response.status_code)
-                    _logger.error(response.text)
-                    _logger.error(f'Using: {request}')
                     raise HTTPException(status_code = response.status_code,
                                         detail = response.text)
 
             except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError) as e:
-                _logger.debug(f'rate limited on address: {address}')
+                _logger.debug(f'Rate limited on address: {address}')
                 wait *= 2
                 time.sleep(wait)
 
         return result
 
-    # _logger.debug(f'Getting transactions for: {addresses[0]}')
     tasks = [asyncio.to_thread(get_transactions_for, address)
             for address in addresses]
 
     transactions_found = await asyncio.gather(*tasks) if len(tasks) else []
-    result = {address : transactions
-            for address_transactions in transactions_found
-            for address, transactions in address_transactions.items() }
+    for transactions_for in transactions_found:
+        result.extend(transactions_for)
 
-    # _logger.debug(f'result {result}')
     return result
 
+@dataclass
 class TransactionDetails():
-    timestamp: datetime 
-    hash: str 
-    is_input: bool 
+    transaction: bdk.TransactionDetails 
     twap: float
 
-    def __init__(self, *, timestamp = None, hash = None, is_input = None, twap = None):
-        self.timestamp   = timestamp
-        self.hash        = hash
-        self.is_input    = is_input
-        self.twap        = twap
+    def __init__(self, *, transaction, twap):
+        self.transaction = transaction
+        self.twap = twap
 
-TransactionDetailsForAddresses = dict[Address, list[TransactionDetails]] 
+    def id(self) -> str:
+        result = self.transaction.txid  
+        return result
+
+    def timestamp(self) -> datetime:
+        result = datetime.fromtimestamp(self.transaction.confirmation_time.timestamp)
+        return result
+
+    def amount(self) -> float:
+        '''
+        Amount in BTC.
+        '''
+        result = 0.0
+        result = self.transaction.received - self.transaction.sent
+        return result * 1e-8
+
+
 async def make_transaction_details(
-        transactions: dict[Address, Transactions],
+        transactions: list[bdk.TransactionDetails],
         currency,
         spotbit: Spotbit
-        ) -> TransactionDetailsForAddresses:
+        ) -> list[TransactionDetails]:
 
     from statistics import mean
 
-    addresses = transactions.keys()
-    result = {address: [] for address in addresses}
+    result = []
 
-    def get_transaction_details_for(address: str, 
-            transactions: Transactions, 
-            ) -> TransactionDetailsForAddresses:
+    candles = []
+    try:
+        candles = spotbit.get_candles_at_dates(
+                currency = currency,
+                dates = [datetime.fromtimestamp(t.confirmation_time.timestamp) for t in transactions])
 
-        assert transactions 
+    except HTTPException as e:
+        raise Exception(e.detail) 
 
-        result = {address: []}
-        
-        timestamps_to_get = [datetime.fromtimestamp(transaction['status']['block_time'])
-                for transaction in transactions]
-    
-        assert len(timestamps_to_get)
+    # FIXME(nochiel) Give the user a good error here.
+    assert len(candles) == len(transactions), (
+            f'Expected: {len(transactions) = }\tGot: {len(candles) = }')
+    if candles:
+        for i in range(len(transactions)):
+            candle = candles[i]
+            detail = TransactionDetails(
+                    transaction = transactions[i],
+                    twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2))
 
-        candles = []
-        try:
-            assert spotbit, 'The Spotbit client has not been initialised.'
-            candles = spotbit.get_candles_at_dates(
-                    currency = currency,
-                    dates = timestamps_to_get)
+            result.append(detail)
 
-        except HTTPException as e:
-            raise Exception(e.detail) from e
-
-        if candles:
-            assert len(candles) == len(transactions), (
-                    f'Expected: len(transactions): {len(transactions)}\tGot: len(candles): {len(candles)}')
-            _logger.debug(f'candles: {candles}')
-            for i in range(len(transactions)):
-                transaction = transactions[i]
-                inputs = transaction['vin']
-                is_input = False
-                for input in inputs:
-                    prevout = input['prevout']
-                    is_input = (prevout['scriptpubkey_address'] == address)
-                    if is_input: break
-
-                timestamp = datetime.fromtimestamp(transaction['status']['block_time'])
-                candle    = candles[i]
-
-                detail = TransactionDetails(
-                        timestamp = timestamp,
-                        hash = transaction['txid'],
-                        is_input = is_input,
-                        twap = round(mean([candle.open, candle.high, candle.low, candle.close]), 2))
-                result[address].append(detail)
-
-        return result
-
-    tasks = []
-    for address, transactions_for in transactions.items():
-        if len(transactions_for):
-            tasks.append(asyncio.to_thread(get_transaction_details_for, 
-                address = address, transactions = transactions_for))
-
-
-    if tasks:
-        transaction_details = await asyncio.gather(*tasks)
-
-        for details_for in transaction_details:
-            for address, details in details_for.items():
-                result[address].extend(details)
-
+    result.sort(key = lambda t: t.timestamp())
     return result
 
-def make_records(descriptor, *, 
-        transaction_details: TransactionDetailsForAddresses, 
-        transactions: dict[Address, Transactions],
+def make_records(wallet, descriptor, *, 
+        transaction_details: list[TransactionDetails], 
         currency: str
         ) -> str:
 
@@ -286,7 +329,10 @@ def make_records(descriptor, *,
     # - Add postings to transactions.
     # - Dump the account to a file.
 
-    memo = f'# Transactions for {descriptor}'
+    memo = f'# Transactions for {descriptor}\n'
+    if wallet.get_balance():
+        memo += f'# Balance: {wallet.get_balance().confirmed * 1e-8} BTC' 
+            
     # Ref. beancount/realization.py
     type                = 'Assets'
     country             = ''
@@ -310,25 +356,8 @@ def make_records(descriptor, *,
     assert account.is_valid(fiat_account), f'Account name is not valid. Got: {fiat_account}'
 
     # Loop through on-chain transactions and create transactions and relevant postings for each transaction.
-
-    def get_earliest_blocktime(transactions: dict[Address, Transactions] = transactions) -> datetime:
-
-        result = datetime.now()
-        txs = list(transactions.values())[0]
-        _logger.debug(txs)
-        if txs[0]:
-            result = datetime.fromtimestamp(txs[0]['status']['block_time'])
-
-        for transactions_for in transactions.values():
-            if transactions_for:
-                for transaction in transactions_for:
-                    timestamp = datetime.fromtimestamp(transaction['status']['block_time'])
-                    result = timestamp if timestamp < result else result
-
-        return result
-
-    date_of_account_open = get_earliest_blocktime().date()
-    _logger.debug(f'date_of_account_open: {date_of_account_open }')
+    date_of_account_open = transaction_details[0].timestamp()
+    _logger.debug(f'{date_of_account_open = }')
 
     # Commodity directive
     '''
@@ -345,13 +374,9 @@ def make_records(descriptor, *,
     # Account directive
     # e.g. YYYY-MM-DD open Account [ConstraintCurrency,...] ["BookingMethod"]
     account_directives = [
-            f'{date_of_account_open} open {btc_account}\tBTC',
-            f'{date_of_account_open} open {fiat_account}\t{currency}',
+            f'{date_of_account_open.date()} open {btc_account}\tBTC',
+            f'{date_of_account_open.date()} open {fiat_account}\t{currency}',
             ]
-
-    transactions_by_hash = {tx['txid'] : tx 
-            for for_address in transactions.values()
-            for tx in for_address}
 
     # TODO(nochiel) Order transactions by date. For each date record a btc price.
     # e.g. 2015-04-30 price AAPL 125.15 USD
@@ -394,62 +419,39 @@ def make_records(descriptor, *,
         return result
 
     assert transaction_details
-    # _logger.debug(f'transaction_details: {transaction_details}')
+    # _logger.debug(f'transaction_details = }')
 
     transaction_directives = []
-    addresses = transactions.keys()
-    for address in addresses:
+    for detail in transaction_details:
+        # Create a beancount transaction for each transaction.
+        # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
 
-        details = transaction_details[address]
-        # Post transactions in chronological order. Esplora gives us reverse-chronological order
-        details.reverse()   
+        ''' E.g. 
+        2014-07-11 * "Sold shares of S&P 500"
+          Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
+          Assets:ETrade:Cash          1979.90 USD
+          Income:ETrade:CapitalGains
+        '''
 
-        for detail in details:
+        meta = '' 
+        date = detail.timestamp().date()    
+        flag = '*'
+        tags = [] 
+        links = []
 
-            # Create a beancount transaction for each transaction.
-            # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
+        transaction_title_directive = f'{date} * "Transaction hash: {detail.id()}"'
+        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
+        # FIXME(nochiel) Add cost basis.
+        btc_amount_directive += f' @ {detail.twap :.2f} {currency}\t' 
 
-                ''' E.g. 
-                2014-07-11 * "Sold shares of S&P 500"
-                  Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
-                  Assets:ETrade:Cash          1979.90 USD
-                  Income:ETrade:CapitalGains
-                '''
-                meta = '' 
-                date = detail.timestamp.date()
-                flag = '*'
-                payees = get_payees(transactions_by_hash[detail.hash])
-                if not detail.is_input:
-                    payees_in_descriptor = filter(lambda payee: payee.address in addresses, payees)
-                    payees = list(payees_in_descriptor)
+        fiat_amount = detail.twap * detail.amount() 
+        fiat_amount_directive = ( f'\t{fiat_account}\t' 
+                f'{-fiat_amount :.2f} {currency}\t')
 
-                tags = [] 
-                links = []
-
-                # Should a payee posting use the output address as a subaccount?
-                # Each payee is a transaction
-                # If not is_input put our receiving transactions first.
-                for payee in payees:
-                    transaction_directive = f'{date} * "{payee.address}" "Transaction hash: {detail.hash}"'
-
-                    btc_payee_transaction_directive = f'\t{btc_account}\t{"-" if detail.is_input else ""}{payee.amount * 1e-8 : .8f} BTC' 
-
-                    transaction_fiat_amount = detail.twap * payee.amount * 1e-8
-                    if not detail.is_input:
-                        btc_payee_transaction_directive += f' {{{detail.twap : .2f} {currency} }}' 
-                    if detail.is_input: 
-                        btc_payee_transaction_directive += f' @ {detail.twap : .2f} {currency}\t' 
-                    fiat_payee_transaction_directive = (f'\t{fiat_account}\t{"-" if not detail.is_input else ""}' 
-                            + f'{transaction_fiat_amount : .2f} {currency}\t')
-
-                    payee_transaction_directive = btc_payee_transaction_directive
-                    payee_transaction_directive += '\n'
-                    payee_transaction_directive += fiat_payee_transaction_directive
-
-                    transaction_directive += '\n'
-                    transaction_directive += payee_transaction_directive
-                    transaction_directive += '\n'
-                    transaction_directives.append(transaction_directive)
+        transaction_directive = transaction_title_directive + '\n' 
+        transaction_directive += btc_amount_directive + '\n' 
+        transaction_directive += fiat_amount_directive + '\n'
+        transaction_directives.append(transaction_directive)
 
     document = f'{memo}\n\n'
     document += btc_commodity_directive
@@ -497,11 +499,17 @@ class Key:
     paths:       list[str]
 
     def __repr__(self):
+        result = ''
         data = ''
         for path in self.paths:
             data += path + '/'
         data = data[:len(data) - 1]
-        return f'[{self.fingerprint}]{data}'
+
+        if self.fingerprint:
+            result = f'[{self.fingerprint}]'
+        result += data
+        return result
+
 
 class Token:
     ...
@@ -528,96 +536,138 @@ async def make_beancount_file_for(
     spotbit:    Spotbit):
 
     parsed_descriptor = ParsedDescriptor(descriptor)
-    _logger.debug(f'{parsed_descriptor=}')
-
-    config  =  bdk.DatabaseConfig.MEMORY('')
-    esplora = bdk.BlockchainConfig.ESPLORA(
-            bdk.EsploraConfig(
-                base_url = get_esplora_api(network),
-                stop_gap = 100,
-                proxy = None,
-                timeout_read = 5,
-                timeout_write = 5,
-                )
-            )
-
+    _logger.debug(f'{parsed_descriptor = }')
+    
+    bdk_sync_was_incomplete = False
+    retry = True
     wallet = None
-    try:
-        wallet = bdk.Wallet(
-                descriptor = descriptor,
-                change_descriptor = None,   
-                network = network,
-                database_config = config,
-                blockchain_config = esplora
-                )
 
-    except bdk.BdkError.Descriptor as e:
-        _logger.error(f'Error creating wallet: {e}')
-        _logger.debug('Attempting to use descriptor as multipath descriptor.')
-        assert parsed_descriptor.change_descriptor
-        _logger.debug(f'Initialising wallet with:\n'
-                     f'descriptor: {parsed_descriptor.external_descriptor}\n'
-                     f'change_descriptor: {parsed_descriptor.change_descriptor}')
-        wallet = bdk.Wallet(
-                descriptor = str(parsed_descriptor.external_descriptor),
-                change_descriptor = str(parsed_descriptor.change_descriptor),   
-                network = network,
-                database_config = config,
-                blockchain_config = esplora
-                )
+    def new_wallet(descriptor = descriptor, parsed_descriptor = parsed_descriptor) -> bdk.Wallet | None:
+        wallet = None
+        try:
+            wallet = bdk.Wallet(
+                    descriptor = (str(parsed_descriptor.external_descriptor) 
+                        if parsed_descriptor.change_descriptor
+                        else descriptor),
+                    change_descriptor = (str(parsed_descriptor.change_descriptor) 
+                        if parsed_descriptor.change_descriptor
+                        else descriptor),   
+                    network = network,
+                    database_config = bdk.DatabaseConfig.MEMORY())
+
+        except bdk.BdkError.Descriptor as e:
+            if str(e) == 'Descriptor(InvalidDescriptorChecksum)':
+                _logger.info('This descriptor has an invalid checksum. We will try to create a wallet without using the checksum provided.')
+                assert '#' in descriptor, WalletCreationError(e)
+                descriptor = descriptor.partition('#')[0]
+                pased_descriptor = ParsedDescriptor(descriptor)
+                wallet = new_wallet(descriptor, parsed_descriptor)
+            else:
+                raise WalletCreationError(e) 
+
+        return wallet
+
+    wallet = new_wallet()
+    if wallet:
+        '''
+        esplora = bdk.BlockchainConfig.ESPLORA(
+                bdk.EsploraConfig(
+                    base_url = get_esplora_api(network),
+                    proxy = None, 
+                    stop_gap = _GAP_SIZE,
+                    concurrency = 8,
+                    timeout = 500,))
+        '''
+        electrum = bdk.BlockchainConfig.ELECTRUM(
+                bdk.ElectrumConfig(
+                    url = get_electrum_api(network),
+                    socks5 = None,
+                    retry = 5,
+                    timeout = 100,
+                    stop_gap = _GAP_SIZE))
+        blockchain = bdk.Blockchain(electrum)
+
+        while retry:
+            try:
+                class Progress(bdk.Progress):
+                    def update(self, progress, message): 
+                        _logger.info(f'Syncing wallet: {progress}, {message}')
+
+                _logger.info('Attempting to sync wallet.')
+                wallet.sync(blockchain, Progress())
+                _logger.info('Wallet sync completed.')
+
+                bdk_sync_was_incomplete = (wallet.list_transactions() and wallet.get_balance().confirmed == 0)
+                if bdk_sync_was_incomplete:
+                    raise BDKIncompleteSyncError(f'{len(wallet.list_transactions()) = }, {wallet.get_balance().confirmed = }')
+
+                _logger.debug('Wallet sync successful.')
+                _logger.debug(f'{str(wallet.get_balance()) =}')
+
+                if not wallet.list_transactions():
+                    if len(parsed_descriptor.keys[0].paths) == 1:
+                        _logger.info('The descriptor has no paths. We will attempt to use a default path of "0/*" to create the wallet.')
+                        retry = True
+                        parsed_descriptor.keys[0].paths.extend(['0', '*'])
+                        descriptor = str(parsed_descriptor.external_descriptor)
+                        _logger.debug(f'{descriptor = }')
+                        continue
+
+                retry = False
+
+            except (bdk.BdkError.Esplora, bdk.BdkError.Electrum) as e:
+                # FIXME(nochiel) We don't need to handle this here.
+                # Esplora(Ureq(Transport(Transport { kind: Io, message: None, url: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("blockstream.info ")), port: None, path: "/testnet/api//blocks/tip/height", query: None, fragment: None }), source: Some(Custom { kind: TimedOut, error: Transport(Transport { kind: Io, message: Some("Error encountered in the status line"), url: None, source: Some(Os { code: 10060, kind: TimedOut, message: "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond." }), response: None }) }), response: None })))
+                retry = False
+                if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
+                    _logger.error(e)
+                    raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
+                raise Exception('Error while syncing wallet.', e) 
 
     assert wallet
-    _logger.debug(f'wallet.balance: {wallet.get_balance()}')
-    _logger.debug(f'wallet.transactions: {wallet.get_transactions()}')
 
-    transactions = {}
+    '''
     addresses = []
-    addresses_to_check = [wallet.get_new_address() for _ in range(_GAP_SIZE)]
-    while addresses_to_check:
-        _logger.debug(f'Wallet addresses generated:\n\t' +
+    # strange things happen when i ask bdk for addresses so that i can query esplora for transactions associated with those addresses if any. for some descriptors, i get addresses that have transactions that don't belong to the descriptor i.e. sparrow wallet does not list those transactions as belonging to the descriptor. it would seem, then that bdk is generating wrong addresses?
+    # additionally, because i can't ask bdk for internal addresses, this method of testing the gap does not allow us to exhaustively/accurately obtain all transactions associated with a descriptor.
+    while 1:
+        addresses_to_check = [wallet.get_address(bdk.addressindex.new).address for _ in range(_gap_size)]
+        _logger.debug(f'wallet addresses generated:\n\t' +
                     '\n\t'.join(addresses_to_check[:10]) + 
                     f'\n...{len(addresses_to_check[11:])} more...')
 
         transactions_to_check = await get_transactions(addresses_to_check, network)    
-        # _logger.debug(f'transactions_to_check: {transactions_to_check }')
-        transactions_found = False
-        for address, transactions_for in transactions_to_check.items():
-            if transactions_for: transactions_found = True 
+        if not transactions_to_check:
+            break
 
-        if not transactions_found: break
-
-        transactions.update(transactions_to_check)
-        addresses_to_check = [address for address, transactions_for in transactions_to_check.items() if transactions_for]
+        transactions.extend(transactions_to_check)
         addresses.extend(addresses_to_check)
         addresses_to_check = [wallet.get_new_address() for _ in range(_GAP_SIZE)]
 
     # _logger.debug('---transactions--')
-    # _logger.debug(transactions)
-    number_of_transactions_found = sum([len(ts) for ts in transactions.values()])
-    _logger.debug(f'Number of transactions found: {number_of_transactions_found }')
-    if number_of_transactions_found  == 0:
+    '''
+
+    if not wallet.list_transactions():
         _logger.info(f'{descriptor} does not have any transactions within a gap size of {_GAP_SIZE}.')
         return
 
     _logger.debug('Making transaction details.')
-    transaction_details = await make_transaction_details(
-            transactions = transactions,
+    transaction_details  = await make_transaction_details(
+            transactions = wallet.list_transactions(),
             currency     = currency,
             spotbit      = spotbit)
 
-    if not transaction_details:
-        raise Exception('No transaction details')
+    assert transaction_details, Exception('No transaction details.')
 
-    # _logger.debug(f'transaction_details: {transaction_details}')
+    # _logger.debug(f'{transaction_details = }')
 
     _logger.debug('Making beancount file.')
-    beancount_document = make_records(descriptor, 
+    beancount_document = make_records(wallet, descriptor, 
             transaction_details = transaction_details, 
-            transactions        = transactions,
             currency            = currency)
 
     if not beancount_document:
-        raise Exception('The beancountfile was not generated')
+        raise Exception('The beancount file was not generated')
 
     _logger.debug('Writing beancount file.')
     if beancount_document:
@@ -753,7 +803,7 @@ class ParsedDescriptor:
                 result = [Script(ScriptType[script_type], script)
                     for script in parse_script(inner_script)]
 
-            _logger.debug(f'{result=}')
+            _logger.debug(f'{result = }')
             return result
 
         _logger.debug('Looking for checksum.')
@@ -765,13 +815,13 @@ class ParsedDescriptor:
             script, self.checksum = descriptor.split('#')
 
         descriptors = parse_script(script)
-        _logger.debug(f'{descriptors=}')
+        _logger.debug(f'{descriptors = }')
         if len(descriptors) == 1: 
             [self.external_descriptor, self.change_descriptor] = descriptors[0], None
         else:
             [self.external_descriptor, self.change_descriptor] = descriptors
-        _logger.debug(f'{self.external_descriptor=}')
-        _logger.debug(f'{self.change_descriptor=}')
+        _logger.debug(f'{self.external_descriptor = }')
+        _logger.debug(f'{self.change_descriptor = }')
 
     def get_address_type(self) -> DescriptorType:
         # Ref. https://en.bitcoin.it/wiki/List_of_address_prefixes
@@ -843,52 +893,62 @@ def format_filename(descriptor: ParsedDescriptor) -> str:
             f'{key_id}-'
             f'HDKey from {seedname}-'
             f'{document_type}-'
-            f'[{descriptor.fingerprint}_{account_number}_{descriptor_type}_{descriptor.checksum}]-'
-            'Beancount.txt'
+            f'[{descriptor.fingerprint}_{account_number}_{descriptor_type}_{descriptor.checksum}]'
+            '.bean'
             )
 
     return result
 
+###
+
+import typer
+from lib import Network
+
+
+def beancount(
+        spotbit_url: str,
+        descriptor:  Descriptor,
+        network:     Network = Network.TESTNET,
+        currency:    str = 'USD',
+        verbose:     bool = False):
+    '''
+    Generate a beancount file using the transactions found by generating addresses from the bitcoin mainnet descriptor.
+
+    Ref. https://beancount.github.io/docs/trading_with_beancount.html
+    '''
+
+    # _logger = get_logger(verbose)
+    assert _logger, "A logger wasn't created."
+    if verbose:
+        _logger.setLevel(logging.DEBUG)
+
+    typer.echo(f'Generating beancount report for descriptor: {descriptor}')
+    typer.echo(f'{currency = }')
+
+    spotbit = Spotbit(spotbit_url)
+    import bdkpython as bdk
+    bdk_network = bdk.Network[network.name.upper()]
+
+    try:
+       _logger.debug('Starting')
+       _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
+       result = asyncio.run(
+               make_beancount_file_for(descriptor, currency, bdk_network, spotbit), 
+               # debug = True
+               )
+       result = result.result() if result else None
+    except Exception as e:
+        _logger.error(e)
+        if e.__cause__: _logger.error(e.__cause__)
+        typer.echo()
+        typer.echo(f'---') 
+        typer.echo(f'An error occurred while generating a beancount file.')
+        if str(e): typer.echo(e)
+        typer.echo(f'---')
+        if verbose: 
+            raise
+
 if __name__ == '__main__':
-    
-    import typer
-
-    from lib import Network
-
-    def beancount(
-            spotbit_url: str,
-            descriptor:  Descriptor,
-            network:     Network = Network.TESTNET.value,
-            currency:    str = 'USD',
-            verbose:     bool = False):
-        '''
-        Generate a beancount file using the transactions found by generating addresses from the bitcoin mainnet descriptor.
-
-        Ref. https://beancount.github.io/docs/trading_with_beancount.html
-        '''
-
-        _logger = get_logger(verbose)
-        assert _logger
-
-        typer.echo(f'Generating beancount report for descriptor: {descriptor}')
-        typer.echo(f'Using currency: {currency}')
-
-        spotbit = Spotbit(spotbit_url)
-        import bdkpython as bdk
-        bdk_network = bdk.Network[network.value.upper()]
-
-        try:
-           _logger.debug('Starting')
-           _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
-           result = asyncio.run(
-                   make_beancount_file_for(descriptor, currency, bdk_network, spotbit), 
-                   # debug = True
-                   )
-           result = result.result() if result else None
-        except Exception as e:
-           typer.echo(f'An error occurred while generating a beancount file: {e}')
-
-
     typer.run(beancount)
 
 
