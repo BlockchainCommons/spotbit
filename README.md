@@ -199,3 +199,31 @@ The following keys may be used to communicate sensitive information to developer
 | Christian Murray |  9A44 D707 5580 A022 8A99  8CEC 0178 C17E 95C7 BA35|
 
 You can import a key by running the following command with that individual’s fingerprint: `gpg --recv-keys "<fingerprint>"` Ensure that you put quotes around fingerprints that contain spaces.
+
+---
+
+## Roadmap
+
+- [ ] Beancount reporting improvements
+  - Ref. https://github.com/BlockchainCommons/spotbit/issues/61
+  - [ ] Spotbit should process transaction records as CSVs from:
+    - [ ] [Sparrow Wallet](https://www.sparrowwallet.com)
+    - [ ] [BTCPay](https://btcpayserver.org/) 
+- [ ] Fee estimation API 
+  - Ref. https://github.com/BlockchainCommons/Community/issues/22#issuecomment-1169442462)
+  - Spotbit should connect to an Esplora in order to obtain [fee estimates](https://github.com/Blockstream/esplora/blob/master/API.md#fee-estimates)
+- [ ] Connect via Tor-gap to Esplora/Core 
+  - [ ] Add a configuration option that specifies Tor proxy URL and port .
+    - [ ] Test that Tor client is installed on the server.
+    - [ ] [Modify requests](https://docs.python-requests.org/en/latest/user/advanced/#proxies) to use a Tor proxy.
+- [ ] Front-end improvements
+  - Ref. https://github.com/BlockchainCommons/spotbit/issues/59
+  - The front-end should visualize useful data from the API and allow the user to query the API. 
+  - Show the current configuration of the Spotbit instance.
+  - [ ] Migrate front-end to [current API](https://spotbit.info/docs).
+  - [ ] Show current prices from configured exchanges.
+  - [ ] Display relevant (to be determined by what is useful) data from existing API endpoints.
+- [ ] Improve releases and builds.
+  - [ ] [Make a script for releasing Debian Packages of Spotbit](https://github.com/BlockchainCommons/spotbit/issues/102)
+  - [ ] [Add a build script to create executables for release](https://github.com/BlockchainCommons/spotbit/issues/77)
+  - [ ] [Add and document dockerfile](https://github.com/BlockchainCommons/spotbit/issues/70)
