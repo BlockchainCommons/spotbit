@@ -49,15 +49,31 @@ Blockchain Commons apps do not phone home and do not run ads. Some are available
 
 Spotbit is currently under active development and in the late alpha testing phase. It should not be used for production tasks until it has had further testing and auditing.
 
-### Roadmap
+## Roadmap
 
-Ongoing maintenance and features are listed in the repository's "issues" page.
-
-- [x] June 2020: Completion of research and planning.
-- [x] August 2020: Completed first working setup, began alpha testing.
-- [x] September 2020: Released alpha versions 2 and 3, continued testing, improved install scripts, deployed to a linode server.
-- [x] Late 2020: Support custom rules for price construction, alpha version 4, deploy spotbit to more remote servers, complete spotbit website.
-- 2021 - : Ongoing maintenance and features are listed in the repository's "issues" page.
+- [ ] Beancount reporting improvements
+  - Ref. https://github.com/BlockchainCommons/spotbit/issues/61
+  - [ ] Spotbit should process transaction records as CSVs from:
+    - [ ] [Sparrow Wallet](https://www.sparrowwallet.com)
+    - [ ] [BTCPay](https://btcpayserver.org/) 
+- [ ] Fee estimation API 
+  - Ref. https://github.com/BlockchainCommons/Community/issues/22#issuecomment-1169442462)
+  - Spotbit should connect to an Esplora in order to obtain [fee estimates](https://github.com/Blockstream/esplora/blob/master/API.md#fee-estimates)
+- [ ] Connect via Tor-gap to Esplora/Core 
+  - [ ] Add a configuration option that specifies Tor proxy URL and port .
+    - [ ] Test that Tor client is installed on the server.
+    - [ ] [Modify requests](https://docs.python-requests.org/en/latest/user/advanced/#proxies) to use a Tor proxy.
+- [ ] Front-end improvements
+  - Ref. https://github.com/BlockchainCommons/spotbit/issues/59
+  - The front-end should visualize useful data from the API and allow the user to query the API. 
+  - Show the current configuration of the Spotbit instance.
+  - [ ] Migrate front-end to [current API](https://spotbit.info/docs).
+  - [ ] Show current prices from configured exchanges.
+  - [ ] Display relevant (to be determined by what is useful) data from existing API endpoints.
+- [ ] Improve releases and builds.
+  - [ ] [Make a script for releasing Debian Packages of Spotbit](https://github.com/BlockchainCommons/spotbit/issues/102)
+  - [ ] [Add a build script to create executables for release](https://github.com/BlockchainCommons/spotbit/issues/77)
+  - [ ] [Add and document dockerfile](https://github.com/BlockchainCommons/spotbit/issues/70)
 
 ## Development setup
 
@@ -202,28 +218,4 @@ You can import a key by running the following command with that individual’s f
 
 ---
 
-## Roadmap
 
-- [ ] Beancount reporting improvements
-  - Ref. https://github.com/BlockchainCommons/spotbit/issues/61
-  - [ ] Spotbit should process transaction records as CSVs from:
-    - [ ] [Sparrow Wallet](https://www.sparrowwallet.com)
-    - [ ] [BTCPay](https://btcpayserver.org/) 
-- [ ] Fee estimation API 
-  - Ref. https://github.com/BlockchainCommons/Community/issues/22#issuecomment-1169442462)
-  - Spotbit should connect to an Esplora in order to obtain [fee estimates](https://github.com/Blockstream/esplora/blob/master/API.md#fee-estimates)
-- [ ] Connect via Tor-gap to Esplora/Core 
-  - [ ] Add a configuration option that specifies Tor proxy URL and port .
-    - [ ] Test that Tor client is installed on the server.
-    - [ ] [Modify requests](https://docs.python-requests.org/en/latest/user/advanced/#proxies) to use a Tor proxy.
-- [ ] Front-end improvements
-  - Ref. https://github.com/BlockchainCommons/spotbit/issues/59
-  - The front-end should visualize useful data from the API and allow the user to query the API. 
-  - Show the current configuration of the Spotbit instance.
-  - [ ] Migrate front-end to [current API](https://spotbit.info/docs).
-  - [ ] Show current prices from configured exchanges.
-  - [ ] Display relevant (to be determined by what is useful) data from existing API endpoints.
-- [ ] Improve releases and builds.
-  - [ ] [Make a script for releasing Debian Packages of Spotbit](https://github.com/BlockchainCommons/spotbit/issues/102)
-  - [ ] [Add a build script to create executables for release](https://github.com/BlockchainCommons/spotbit/issues/77)
-  - [ ] [Add and document dockerfile](https://github.com/BlockchainCommons/spotbit/issues/70)
