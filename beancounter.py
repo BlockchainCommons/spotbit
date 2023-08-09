@@ -24,7 +24,7 @@ import requests
 # - generate a descriptor from an extended key.
 # - test if an address belongs to a HDkey
 # - query Esplora or Electrum/Electrs using an agnostic API.
-# - load utxo transaction history 
+# - load utxo transaction history
 # ref. https://raw.githubusercontent.com/bitcoin/bitcoin/master/doc/descriptors.md
 
 import bdkpython as bdk
@@ -82,13 +82,18 @@ class Spotbit:
 
         result = None
 
-        request = f'{self.url}/api/history/{currency}?exchange=ftx'
+        request = f'{self.url}/api/history/{currency}?exchange=binance'
         body    = [dt.isoformat() for dt in dates]
         response = requests.post(request, json = body)
         if response.status_code == 200:
             result = [Candle(**data) for data in response.json()]
         else:
-            raise HTTPException(detail = response.json() , status_code = response.status_code)
+            detail = ''
+            try:
+                detail = response.json()
+            except requests.exceptions.JSONDecodeError as e:
+                detail = response.text
+            raise HTTPException(detail = detail, status_code = response.status_code)
 
         return result
 
@@ -103,12 +108,7 @@ def get_esplora_api(network: bdk.Network) -> str:
     ESPLORA_API_MAINNET = 'https://blockstream.info/api/'
     ESPLORA_API_TESTNET = 'https://blockstream.info/testnet/api/'
 
-    result = ''
-    match network:
-        case bdk.Network.BITCOIN:
-            result = ESPLORA_API_MAINNET
-        case bdk.Network.TESTNET:
-            result = ESPLORA_API_TESTNET
+    result = ESPLORA_API_MAINNET if network == bdk.Network.BITCOIN else ESPLORA_API_TESTNET
     return result
 
 Descriptor = str
@@ -119,7 +119,7 @@ class ScriptPub(BaseModel):
     scriptpubkey: str
     scriptpubkey_asm: str
     scriptpubkey_type: str
-    scriptpubkey_address: Address 
+    scriptpubkey_address: Address
     value: int
 
 class Transaction(BaseModel):
@@ -142,13 +142,13 @@ class Transaction(BaseModel):
         confirmed: bool
         block_height: int
         block_hash: str
-        block_time: datetime 
+        block_time: datetime
 
     txid: Txid
     version: int
     locktime: int
     vin: list[Vin]
-    vout: list[ScriptPub] 
+    vout: list[ScriptPub]
     size: int
     weight: int
     fee: int
@@ -168,7 +168,7 @@ async def get_transactions(
     result = []
 
     '''
-    # Example of result: 
+    # Example of result:
 
      transactions = [[
          {
@@ -231,7 +231,7 @@ async def get_transactions(
                 request = f'{get_esplora_api(network)}/address/{address.address}/txs'
                 response = requests.get(request)
                 wait = 0
-                if response.status_code == 200: 
+                if response.status_code == 200:
                     _logger.debug(f'{response.json() = }')
                     if response.json():
                         _logger.debug(f'{address.address =}\n{response.json() = }')
@@ -281,7 +281,7 @@ class TransactionDetails:
     def id(self) -> str:
         result = '0xCAFEBABE'
         if isinstance(self.transaction, bdk.TransactionDetails):
-            result = self.transaction.txid  
+            result = self.transaction.txid
         elif isinstance(self.transaction, CSVTransaction):
             result = self.transaction.csvFileTransaction.Txid
         return result
@@ -306,12 +306,12 @@ class TransactionDetails:
         elif isinstance(self.transaction, CSVTransaction):
             result = self.transaction.csvFileTransaction.Value
 
-        return result 
+        return result
 
     def fees(self) -> float:
         result = 0.0
         if isinstance(self.transaction, bdk.TransactionDetails):
-            result = self.transaction.fee 
+            result = self.transaction.fee
         elif isinstance(self.transaction, CSVTransaction):
             result = self.transaction.transaction.fee
 
@@ -330,7 +330,7 @@ async def make_transaction_details(
 
     candles, dates = [], []
     if isinstance(transactions[0], bdk.TransactionDetails):
-        dates = [datetime.fromtimestamp(t.confirmation_time.timestamp) 
+        dates = [datetime.fromtimestamp(t.confirmation_time.timestamp)
                  for t in transactions]
     elif isinstance(transactions[0], CSVTransaction):
         dates = [t.csvFileTransaction.Date for t in transactions]
@@ -338,7 +338,7 @@ async def make_transaction_details(
     try:
         candles = spotbit.get_candles_at_dates(currency, dates)
     except HTTPException as e:
-        raise Exception(e.detail) 
+        raise Exception(e.detail)
 
     # FIXME(nochiel) Give the user a good error here.
     assert len(candles) == len(transactions), (
@@ -357,24 +357,24 @@ async def make_transaction_details(
 
 
 transaction_fees_account = 'Expenses:TransactionFees'
-btc_account = 'Assets:Bitcoin' 
+btc_account = 'Assets:Bitcoin'
 fiat_account = 'Liabilities:Cash'
-def make_records(wallet, descriptor, *, 
+def make_records(wallet, descriptor, *,
                  account_name: str,
                  balance = None,
-                 transaction_details: list[TransactionDetails], 
+                 transaction_details: list[TransactionDetails],
                  currency: str
         ) -> str:
 
     # Ref. https://beancount.github.io/docs/beancount_language_syntax.html
     # Create a collection of entries and dump it to text file.
     # - Create accounts
-    # - Create transactions 
+    # - Create transactions
     # - Add postings to transactions.
     # - Dump the account to a file.
 
     memo    = f'; Transactions for {descriptor}\n'
-            
+
     # Ref. beancount/realization.py
     type                = 'Assets'
     country             = ''
@@ -421,12 +421,12 @@ def make_records(wallet, descriptor, *,
             f'; {date_of_account_open.date()} open {fiat_account}\t\t{currency}',
             ]
 
-    balance = balance if balance else wallet.get_balance().confirmed 
+    balance = balance if balance else wallet.get_balance().confirmed
     # 2012-12-26 balance Liabilities:US:CreditCard   -3492.02 USD
     # FIXME(nochiel) This needs to be correct when we file taxes for a single financial year.
     # TODO(nochiel) If using a `main.bean´ file which includes separate yearly account files,
     # put the balance assertion in the ´main.bean´.
-    balance_assertion    = f'{transaction_details[-1].timestamp().date()} balance {btc_account} {balance:.8f} BTC\n\n' 
+    balance_assertion    = f'{transaction_details[-1].timestamp().date()} balance {btc_account} {balance:.8f} BTC\n\n'
 
     # TODO(nochiel) For each date record a btc price. Is this necessary?
     # e.g. 2015-04-30 price AAPL 125.15 USD
@@ -452,36 +452,36 @@ def make_records(wallet, descriptor, *,
         # Create a beancount transaction for each transaction.
         # Then add beancount transaction entries for each payee/output that is not one of the user's addresses.
 
-        ''' E.g. 
+        ''' E.g.
         2014-07-11 * "Sold shares of S&P 500"
           Assets:ETrade:IVV               -10 IVV {183.07 USD} @ 197.90 USD
           Assets:ETrade:Cash          1979.90 USD
           Income:ETrade:CapitalGains
         '''
 
-        meta = '' 
-        date = detail.timestamp().date()    
+        meta = ''
+        date = detail.timestamp().date()
         flag = '*'
-        tags = [] 
+        tags = []
         links = []
 
         payee = 'CUSTOMER' if detail.amount() < 0 else 'VENDOR'
-        price_annotation = f' @ {detail.twap :.2f} {currency}\t\n' 
-        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC' 
+        price_annotation = f' @ {detail.twap :.2f} {currency}\t\n'
+        btc_amount_directive = f'\t{btc_account}\t{detail.amount() :.8f} BTC'
         btc_amount_directive += price_annotation
 
         # FIXME(nochiel) Add cost basis for a transaction posting if it becomes necessary/useful/possible.
         if detail.amount() < 0:
-            btc_amount_directive += f'\t{transaction_fees_account}\t{detail.fees():.8f} BTC'     
+            btc_amount_directive += f'\t{transaction_fees_account}\t{detail.fees():.8f} BTC'
             btc_amount_directive += price_annotation
 
         transaction_title_directive = f'{date} * "{payee}" "NARRATION"\t; https://blockstream.info/tx/{detail.id()}'
 
-        fiat_amount = detail.twap * detail.amount() 
-        # fiat_amount_directive = ( f'\t{fiat_account}\t' 
+        fiat_amount = detail.twap * detail.amount()
+        # fiat_amount_directive = ( f'\t{fiat_account}\t'
         #         f'{-fiat_amount :.2f} {currency}\t')
         fiat_amount_directive = f'\t{fiat_account}\t' # Beancount will infer this entry.
-        transaction_directive = transaction_title_directive + '\n' 
+        transaction_directive = transaction_title_directive + '\n'
         transaction_directive += btc_amount_directive
         transaction_directive += fiat_amount_directive + '\n'
         transaction_directives.append(transaction_directive)
@@ -519,7 +519,7 @@ class ScriptType(Enum):
 
 @dataclass
 class Key:
-    fingerprint: str 
+    fingerprint: str
     paths:       list[str]
 
     def __repr__(self):
@@ -548,12 +548,12 @@ class Script(Token):
 
         if self.type == ScriptType.key:
             result = f'{self.data}'
-        else: 
+        else:
             result = f'{self.type.value}({self.data})'
 
         return result
 
-def get_transactions_from_csv(filename: str, network: bdk.Network) -> tuple[list[Transaction], list[CSVTransaction]]:  
+def get_transactions_from_csv(filename: str, network: bdk.Network) -> tuple[list[Transaction], list[CSVTransaction]]:
     result = []
 
     def get_tx(txid: Txid) -> Transaction | None:
@@ -582,12 +582,12 @@ def get_transactions_from_csv(filename: str, network: bdk.Network) -> tuple[list
     return transactions, result
 
 async def make_beancount_file_for(*,
-                                  spotbit:    Spotbit, 
-                                  descriptor: Descriptor, 
+                                  spotbit:    Spotbit,
+                                  descriptor: Descriptor,
                                   network:    bdk.Network,
                                   account_name: str = '',
                                   csv_filename: str = '',
-                                  currency:   str = 'USD', 
+                                  currency:   str = 'USD',
                                   years:     list[datetime]):
 
     transaction_details = []
@@ -601,12 +601,12 @@ async def make_beancount_file_for(*,
         wallet = None
         try:
             wallet = bdk.Wallet(
-                    descriptor = (str(parsed_descriptor.external_descriptor) 
+                    descriptor = (str(parsed_descriptor.external_descriptor)
                         if parsed_descriptor.change_descriptor
                         else descriptor),
-                    change_descriptor = (str(parsed_descriptor.change_descriptor) 
+                    change_descriptor = (str(parsed_descriptor.change_descriptor)
                         if parsed_descriptor.change_descriptor
-                        else descriptor),   
+                        else descriptor),
                     network = network,
                     database_config = bdk.DatabaseConfig.MEMORY())
 
@@ -618,7 +618,7 @@ async def make_beancount_file_for(*,
                 pased_descriptor = ParsedDescriptor(descriptor)
                 wallet = new_wallet(descriptor, parsed_descriptor)
             else:
-                raise WalletCreationError(e) 
+                raise WalletCreationError(e)
 
         return wallet
 
@@ -629,7 +629,7 @@ async def make_beancount_file_for(*,
             esplora = bdk.BlockchainConfig.ESPLORA(
                     bdk.EsploraConfig(
                         base_url = get_esplora_api(network),
-                        proxy = None, 
+                        proxy = None,
                         stop_gap = _GAP_SIZE,
                         concurrency = 8,
                         timeout = 500,))
@@ -646,7 +646,7 @@ async def make_beancount_file_for(*,
             while retry:
                 try:
                     class Progress(bdk.Progress):
-                        def update(self, progress, message): 
+                        def update(self, progress, message):
                             _logger.info(f'Syncing wallet: {progress}, {message}')
 
                     _logger.info('Attempting to sync wallet.')
@@ -678,7 +678,7 @@ async def make_beancount_file_for(*,
                     if 'TimedOut' in str(e) or 'UnexpectedEof' in str(e):
                         _logger.error(e)
                         raise TimedOutError('Esplora/Electrum timed out. Wait a while then try again later.')
-                    raise Exception('Error while syncing wallet.', e) 
+                    raise Exception('Error while syncing wallet.', e)
 
             assert wallet
 
@@ -728,22 +728,23 @@ async def make_beancount_file_for(*,
 
     documents = []
     for year in years:
-        transaction_details = list(filter(lambda td: td.timestamp().year == year.year, 
+        transaction_details = list(filter(lambda td: td.timestamp().year == year.year,
                                           all_transaction_details))
         assert transaction_details, Exception('No transaction details.')
 
         _logger.debug('Making beancount file.')
-        beancount_document = make_records(wallet, descriptor, 
+        beancount_document = make_records(wallet, descriptor,
                 account_name = account_name,
-                transaction_details = transaction_details, 
+                transaction_details = transaction_details,
                 currency            = currency,
                 balance = balance)
 
         if not beancount_document:
             raise Exception('The beancount file was not generated')
 
-        _logger.debug('Writing beancount file.')
-        document = BeanDocument(f'reports/{year.year}/{format_filename(parsed_descriptor, account_name, year)}',
+        destination = 'reports/{year.year}'
+        _logger.info(f'Writing beancount file to {destination = }')
+        document = BeanDocument(f'destination/{format_filename(parsed_descriptor, account_name, year)}',
                                 beancount_document)
         if document:
             document.write()
@@ -761,7 +762,7 @@ async def make_beancount_file_for(*,
 2019-01-01 commodity USD
   name: "United States Dollar"
   asset-class: "cash"
-        
+
 2008-10-31 commodity BTC
   name: "Bitcoin"
   asset-class: "cryptocurrency"
@@ -856,7 +857,7 @@ class ParsedDescriptor:
 
     def __init__(self, descriptor: Descriptor):
         '''
-        Given a descriptor (maybe with a multipath template), 
+        Given a descriptor (maybe with a multipath template),
         parse it out into (descriptor, change_descriptor) pair.
         '''
         _logger.debug(f'{descriptor=}')
@@ -894,7 +895,7 @@ class ParsedDescriptor:
                         # TODO(nochiel) TEST: Is this a valid assumption.
                         main_key_paths.append(temp[0])
                         change_key_paths.append(temp[1])
-                    else: 
+                    else:
                         main_key_paths.append(path)
                         change_key_paths.append(path)
 
@@ -922,7 +923,7 @@ class ParsedDescriptor:
             script_type     = ''
 
             i = script.find('(')
-            if i == -1: 
+            if i == -1:
                 _logger.debug('Parsing key.')
                 self.keys   = parse_keys(script)
                 result = [Script(ScriptType.key, key) for key in self.keys]
@@ -947,7 +948,7 @@ class ParsedDescriptor:
 
         descriptors = parse_script(script)
         _logger.debug(f'{descriptors = }')
-        if len(descriptors) == 1: 
+        if len(descriptors) == 1:
             [self.external_descriptor, self.change_descriptor] = descriptors[0], None
         else:
             [self.external_descriptor, self.change_descriptor] = descriptors
@@ -956,9 +957,9 @@ class ParsedDescriptor:
 
     def get_address_type(self) -> DescriptorType:
         # Ref. https://en.bitcoin.it/wiki/List_of_address_prefixes
-        # Ref. https://shiftcrypto.ch/blog/what-are-bitcoin-address-types/ 
+        # Ref. https://shiftcrypto.ch/blog/what-are-bitcoin-address-types/
         # Determine type from:
-        #   - type of key 
+        #   - type of key
         #   - 'purpose' field of descriptor. (corresponds to the bip.)
         #   - xpub/ypub/tpub
 
@@ -975,25 +976,25 @@ class ParsedDescriptor:
                 case ScriptType.tr | ScriptType.multi_a | ScriptType.sortedmulti_a :
                     result = DescriptorType.TAPROOT
 
-                case ScriptType.multi | ScriptType.sortedmulti: 
+                case ScriptType.multi | ScriptType.sortedmulti:
                     # Multisig.
                     result = DescriptorType.LEGACY_MULTISIG
                     if key[:4] in ParsedDescriptor.BIP32_PREFIXES:
                         key = key[4:]
 
-                    if key[:3] in ParsedDescriptor.SEGWIT_PREFIXES: 
+                    if key[:3] in ParsedDescriptor.SEGWIT_PREFIXES:
                         result = DescriptorType.SEGWIT_MULTISIG
                     elif key[0] in ParsedDescriptor.NESTED_SEGWIT_PREFIXES:
                         result = DescriptorType.NESTED_MULTISIG
 
-                case ScriptType.pk | ScriptType.pkh | ScriptType.sh: 
+                case ScriptType.pk | ScriptType.pkh | ScriptType.sh:
                     result = DescriptorType.LEGACY
 
                 case ScriptType.wsh | ScriptType.wpkh:
                     result = DescriptorType.SEGWIT
                     # TODO(nochiel) Check all keys not just the first one.
                     if key[0] in ParsedDescriptor.NESTED_SEGWIT_PREFIXES:
-                        result = DescriptorType.NESTED 
+                        result = DescriptorType.NESTED
         return result
 
 def format_filename(descriptor: ParsedDescriptor, account_name: str, year: datetime) -> str:
@@ -1008,16 +1009,16 @@ def format_filename(descriptor: ParsedDescriptor, account_name: str, year: datet
 
     # Key ID — The first 7 digits of the SHA256 digest of the key.
     key = descriptor.keys[0].paths[0]
-    key_id = key[5:13] if key[:4] in ParsedDescriptor.BIP32_PREFIXES else key[:8]            
+    key_id = key[5:13] if key[:4] in ParsedDescriptor.BIP32_PREFIXES else key[:8]
 
     # Descriptor Type — A textual descriptor of the derivation path, currently: "legacy", "legacymultisig", "nested", "nestedmultisig", "segwit", "segwitmultisig", or "taproot".
     descriptor_type = descriptor.get_address_type().value
 
-    account_number = descriptor.account.get_account_number() if descriptor.account else 0 
+    account_number = descriptor.account.get_account_number() if descriptor.account else 0
 
     # HDKey from Seed Name — The prefix "HDKey from" prepended to randomly created or user-selected name for seed. Space separated.
     from random_username.generate import generate_username
-    seedname = f'HDKey from {generate_username()[0]}' 
+    seedname = f'HDKey from {generate_username()[0]}'
 
     document_type = 'Output'
 
@@ -1045,9 +1046,9 @@ from lib import Network
 from typing import Optional
 
 def beancount(
-        spotbit_url: str,
         descriptor:  Descriptor,
-        year:        list[datetime] = typer.Option([datetime(year = 2022, month = 1, day = 1)], 
+        spotbit_url: str = 'http://localhost:5000',     # 'http://spotbit.info',
+        year:        list[datetime] = typer.Option([datetime(year = 2022, month = 1, day = 1)],
                                                      formats = ['%Y']),
         name:        Optional[str] = None, # TODO(nochiel) Document this.
         csv:         Optional[str] = None,
@@ -1074,13 +1075,13 @@ def beancount(
        _logger.debug(f'GAP_SIZE: {_GAP_SIZE}')
 
        result = asyncio.run(
-               make_beancount_file_for(descriptor = descriptor, 
-                                       account_name = name if name else 'Tax report', 
+               make_beancount_file_for(descriptor = descriptor,
+                                       account_name = name if name else 'Tax report',
                                        csv_filename = csv if csv else '',
                                        years = year,
-                                       currency = currency, 
-                                       network = bdk_network, 
-                                       spotbit = spotbit), 
+                                       currency = currency,
+                                       network = bdk_network,
+                                       spotbit = spotbit),
                # debug = True
                )
        result = result.result() if result else None
@@ -1088,11 +1089,11 @@ def beancount(
         _logger.error(e)
         if e.__cause__: _logger.error(e.__cause__)
         typer.echo()
-        typer.echo(f'---') 
+        typer.echo(f'---')
         typer.echo(f'An error occurred while generating a beancount file.')
         if str(e): typer.echo(e)
         typer.echo(f'---')
-        if verbose: 
+        if verbose:
             raise e
 
 if __name__ == '__main__':

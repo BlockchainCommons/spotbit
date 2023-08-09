@@ -4,7 +4,7 @@ class Network(enum.Enum):
     TESTNET = 'testnet'
     SIGNET  = 'signet'
     REGTEST = 'regtest'
-    
+
 if __name__ == '__main__':
 
     import typer
@@ -22,13 +22,15 @@ if __name__ == '__main__':
 
             assert logger
             logger.info(f'debug: {server.app.debug}')
-            uvicorn.run('server:app', 
+            uvicorn.run('server:app',
                     host ='127.0.0.1',
-                    port = 5000, 
-                    debug = server.settings.debug,
+                    port = 5000,
+                    # debug = server.settings.debug,
+                    use_colors = True,
                     log_level = 'debug' if server.settings.debug else 'info',
                     reload = server.settings.debug,
-                    reload_includes = ['spotbit.config']  # FIXME(nochiel) Does nothing? 
+                    reload_dirs = ['./'],
+                    reload_includes = ['spotbit.config', '*.py']  # FIXME(nochiel) Does nothing?
                     )
 
         return cli

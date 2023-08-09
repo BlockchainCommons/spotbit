@@ -1,18 +1,19 @@
-# TODO(nochiel) Add tests 
+# TODO(nochiel) Add tests
 # TODO(nochiel) - Standard error page/response for non-existent routes?
 
 import asyncio
 from datetime import datetime, timedelta
 from http import HTTPStatus
 import os
-import pathlib 
+import pathlib
 import sys
 import time
 
 import ccxt
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, BaseSettings, validator
+from pydantic import BaseModel, validator
+from pydantic_settings import BaseSettings
 
 from lib import Candle
 
@@ -46,14 +47,14 @@ class Settings(BaseSettings):
 # TODO(nochiel) Write comprehensive tests for each exchange so that
 # we can determine which ones shouldn't be supported i.e. populate
 # this list with exchanges that fail tests.
-_unsupported_exchanges = []     
-supported_exchanges: dict[str, ccxt.Exchange] =  {} 
+_unsupported_exchanges = []
+supported_exchanges: dict[str, ccxt.Exchange] =  {}
 
 def get_logger():
 
     import logging
     logger = logging.getLogger(__name__)
-    if settings.debug: logger.setLevel(logging.DEBUG)      
+    if settings.debug: logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter(
         '[%(asctime)s] %(levelname)s (thread %(thread)d):\t%(module)s.%(funcName)s: %(message)s')
@@ -76,7 +77,7 @@ def get_logger():
 settings = Settings()
 
 from enum import Enum
-CurrencyName = Enum('CurrencyName', [(currency, currency) for currency in settings.currencies])  
+CurrencyName = Enum('CurrencyName', [(currency, currency) for currency in settings.currencies])
 
 logger = get_logger()
 assert logger
@@ -93,7 +94,7 @@ assert settings.exchanges
 logger.info('Initialising supported exchanges.')
 for e in settings.exchanges:
     if e in ccxt.exchanges and e not in _unsupported_exchanges:
-        supported_exchanges[e] = ccxt.__dict__[e]() 
+        supported_exchanges[e] = ccxt.__dict__[e]()
         try:
             if app.debug is False: supported_exchanges[e].load_markets()
         except Exception as e:
@@ -101,7 +102,7 @@ for e in settings.exchanges:
 
 assert supported_exchanges
 
-ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in supported_exchanges]) 
+ExchangeName = Enum('ExchangeName', [(id.upper(), id) for id in supported_exchanges])
 
 # Exchange data is sometimes returned as epoch milliseconds.
 def is_ms(timestamp): return timestamp % 1e3 == 0
@@ -112,28 +113,32 @@ def get_supported_pair_for(currency: CurrencyName, exchange: ccxt.Exchange) -> s
 
     exchange.load_markets()
     market_ids = {
-            f'BTC{currency.value}', 
+            f'BTC{currency.value}',
             f'BTC/{currency.value}',
-            f'XBT{currency.value}', 
-            f'XBT/{currency.value}', 
-            f'BTC{currency.value}'.lower(), 
+            f'XBT{currency.value}',
+            f'XBT/{currency.value}',
+            f'BTC{currency.value}'.lower(),
             f'XBT{currency.value}'.lower()}
     market_ids_found = list(market_ids & exchange.markets_by_id.keys())
     if not market_ids_found:
         market_ids_found = list(market_ids & set([market['symbol'] for market in exchange.markets_by_id.values()]))
     if market_ids_found:
-        logger.debug(f'market_ids_found: {market_ids_found}')
+        logger.debug(f'{market_ids_found = }')
         market_id = market_ids_found[0]
-        market = exchange.markets_by_id[exchange.market_id(market_id)] 
-        if market:  
-            result = market['symbol']
+        market = exchange.markets_by_id[exchange.market_id(market_id)]
+        if market:
+            logger.debug(f'{ market = }')
+            if isinstance(market, dict) :
+                result = market['symbol']
+            elif isinstance(market, list) :
+                result = [m['symbol'] for m in market if m['type'] == 'spot'][0]
             logger.debug(f'Found market {market}, with symbol {result}')
 
     return result
 
 
 # FIXME(nochiel) Redundancy: Merge this with get_history.
-# TODO(nochiel) TEST Do we really need to check if fetchOHLCV exists in the exchange api? 
+# TODO(nochiel) TEST Do we really need to check if fetchOHLCV exists in the exchange api?
 # TEST ccxt abstracts internally using fetch_trades so we don't have to use fetch_ticker ourselves.
 def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | None:
     '''
@@ -179,7 +184,7 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
 
         # TODO(nochiel) TEST other exchanges requiring special conditions: bitstamp, bitmart?
         params = []
-        if exchange.id == 'bitfinex': 
+        if exchange.id == 'bitfinex':
             params = {
                     'limit':100,
                     'start': since,
@@ -188,18 +193,18 @@ def request_single(exchange: ccxt.Exchange, currency: CurrencyName) -> Candle | 
 
         try:
             candles = exchange.fetchOHLCV(
-                    symbol      = pair, 
-                    timeframe   = timeframe, 
-                    limit       = limit, 
-                    since       = since, 
+                    symbol      = pair,
+                    timeframe   = timeframe,
+                    limit       = limit,
+                    since       = since,
                     params      = params)
 
-            latest_candle = candles[-1]   
+            latest_candle = candles[-1]
 
         except Exception as e:
             logger.error(f'error requesting candle from {exchange.name}: {e}')
 
-    else:       # TODO(nochiel) TEST 
+    else:       # TODO(nochiel) TEST
         logger.debug(f'fetch_ticker: {pair}')
 
         candle = None
@@ -252,7 +257,7 @@ async def about(request: Request):
 @app.get('/api/status')
 def status(): return 'The server is running.'
 
-# TODO(nochiel) FINDOUT Do we need to enable clients to change configuration? 
+# TODO(nochiel) FINDOUT Do we need to enable clients to change configuration?
 # If clients should be able to change configuration, use sessions.
 @app.get('/api/configure')
 def get_configuration():
@@ -265,10 +270,10 @@ def calculate_average_price(candles: list[Candle]) -> Candle:
 
     assert candles
 
-    from statistics import mean 
-    average_open     = mean(candle.open for candle in candles) 
-    average_high     = mean(candle.high for candle in candles) 
-    average_low      = mean(candle.low for candle in candles) 
+    from statistics import mean
+    average_open     = mean(candle.open for candle in candles)
+    average_high     = mean(candle.high for candle in candles)
+    average_low      = mean(candle.low for candle in candles)
     average_close    = mean(candle.close for candle in candles)
     average_volume   = mean(candle.volume for candle in candles)
 
@@ -315,8 +320,8 @@ async def get_exchanges():
         exchange.load_markets()
 
         currencies = []
-        if exchange.currencies: 
-            currencies = [c for c in settings.currencies 
+        if exchange.currencies:
+            currencies = [c for c in settings.currencies
                     if c in exchange.currencies]
 
         details = ExchangeDetails(
@@ -329,7 +334,7 @@ async def get_exchanges():
         result = details
         return result
 
-    tasks = [asyncio.to_thread(get_exchange_details, exchange) 
+    tasks = [asyncio.to_thread(get_exchange_details, exchange)
             for exchange in supported_exchanges.values()]
     details = await asyncio.gather(*tasks)
 
@@ -363,7 +368,7 @@ async def now_average(currency: CurrencyName):
                 candle = None
                 candle = request_single(exchange, currency)
                 if candle:
-                    result = exchange, candle 
+                    result = exchange, candle
             except Exception as e:
                 logger.error(f'error requesting data from exchange: {e}')
 
@@ -377,7 +382,7 @@ async def now_average(currency: CurrencyName):
     candles = []
     failed_exchanges = []
     for exchange, candle in task_results:
-        if candle: 
+        if candle:
             candles.append(candle)
         else:
             failed_exchanges.append(exchange.name)
@@ -424,7 +429,7 @@ def now(currency: CurrencyName, exchange: ExchangeName):
     if currency.value not in ccxt_exchange.currencies:
        raise HTTPException(
                status_code = HTTPStatus.INTERNAL_SERVER_ERROR,
-               detail      = f'Spotbit does not support {currency.value} on {ccxt_exchange}.' ) 
+               detail      = f'Spotbit does not support {currency.value} on {ccxt_exchange}.' )
 
     result = request_single(ccxt_exchange, currency)
     if not result:
@@ -447,8 +452,8 @@ class OHLCV(IntEnum):
     close       = 4
     volume      = 5
 
-def get_history(*, 
-        exchange: ccxt.Exchange, 
+def get_history(*,
+        exchange: ccxt.Exchange,
         since: datetime,
         limit: int,
         timeframe: str,
@@ -462,7 +467,7 @@ def get_history(*,
     _since = round(since.timestamp() * 1e3)
     params = dict()
     if exchange == "bitfinex":
-        # TODO(nochiel) Is this needed? 
+        # TODO(nochiel) Is this needed?
         # params['end'] = round(end.timestamp() * 1e3)
         ...
 
@@ -476,10 +481,10 @@ def get_history(*,
     while wait:
         try:
             candles = exchange.fetchOHLCV(
-                    symbol      = pair, 
-                    limit       = limit, 
-                    timeframe   = timeframe, 
-                    since       = _since, 
+                    symbol      = pair,
+                    limit       = limit,
+                    timeframe   = timeframe,
+                    since       = _since,
                     params      = params)
 
             wait = 0
@@ -489,7 +494,7 @@ def get_history(*,
             logger.error(f'waiting {wait} seconds on {exchange} before making another request')
             time.sleep(wait)
             wait *= 2
-            if wait > 120: 
+            if wait > 120:
                 raise Exception(f'{exchange} has rate limited spotbit') from e
 
         except Exception as e:
@@ -511,9 +516,9 @@ def get_history(*,
 
 @app.get('/api/history/{currency}/{exchange}', response_model = list[Candle])
 async def get_candles_in_range(
-        currency:   CurrencyName, 
-        exchange:   ExchangeName, 
-        start:      datetime, 
+        currency:   CurrencyName,
+        exchange:   ExchangeName,
+        start:      datetime,
         end:        datetime = datetime.now()):
     '''
     parameters:
@@ -531,7 +536,7 @@ async def get_candles_in_range(
     if not pair:
         raise HTTPException(
                 detail = f'Spotbit does not support the {pair} pair on {ccxt_exchange}',
-                status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
+                status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
 
     result = None
 
@@ -551,7 +556,7 @@ async def get_candles_in_range(
 
     if ccxt_exchange.timeframes:
         if '1h' in ccxt_exchange.timeframes:
-            timeframe   = '1h' 
+            timeframe   = '1h'
             dt          = timedelta(hours = 1)
 
         elif '30m' in ccxt_exchange.timeframes:
@@ -562,7 +567,7 @@ async def get_candles_in_range(
     remaining_frames = remaining_frames_duration // dt
     logger.debug(f'requesting #{n_periods + remaining_frames} periods')
 
-    if n_periods == 0: 
+    if n_periods == 0:
         n_periods               = 1
         limit, remaining_frames = remaining_frames, 0
     for i in range(n_periods):
@@ -571,7 +576,7 @@ async def get_candles_in_range(
     logger.debug(f'requesting periods with {limit} limit: {periods}')
 
     tasks = []
-    args = dict( exchange = ccxt_exchange, 
+    args = dict( exchange = ccxt_exchange,
                 limit = limit,
                 timeframe = timeframe,
                 pair = pair)
@@ -587,18 +592,18 @@ async def get_candles_in_range(
         assert last_candle_time < end
         logger.debug(f'remaining_frames: {remaining_frames}')
 
-        args['since'] = last_candle_time   
+        args['since'] = last_candle_time
         args['limit'] = remaining_frames
         task = asyncio.to_thread(get_history,
-             **args) 
+             **args)
         tasks.append(task)
 
-        new_last_candle_time = last_candle_time + (dt * remaining_frames ) 
+        new_last_candle_time = last_candle_time + (dt * remaining_frames )
         logger.debug(f'new_last_candle_time: {new_last_candle_time}')
 
     task_results = await asyncio.gather(*tasks)
     candles = []
-    for result in task_results:   
+    for result in task_results:
         if result: candles.extend(result)
 
     expected_number_of_candles = (n_periods * limit) + remaining_frames
@@ -619,7 +624,7 @@ async def get_candles_in_range(
 
 @app.post('/api/history/{currency}')
 async def get_candles_at_dates(
-        currency: CurrencyName, 
+        currency: CurrencyName,
         dates:    list[datetime],
         # FIXME(nochiel) Ideally, we should get data from all the configured exchanges.
         # Then pick the results that are complete.
@@ -633,18 +638,18 @@ async def get_candles_at_dates(
     if exchange.value not in supported_exchanges:
         raise HTTPException(
                 detail      = ServerErrors.EXCHANGE_NOT_SUPPORTED,
-                status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
+                status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
 
     ccxt_exchange = supported_exchanges[exchange.value]
     ccxt_exchange.load_markets()
 
     pair = get_supported_pair_for(currency, ccxt_exchange)
-            
+
     # Different exchanges have different ticker formates
-    if not pair:   
+    if not pair:
         raise HTTPException(
                 detail = f'Spotbit does not support the BTC/{currency.value} pair on {exchange.value}',
-                status_code = HTTPStatus.INTERNAL_SERVER_ERROR) 
+                status_code = HTTPStatus.INTERNAL_SERVER_ERROR)
 
     # FIXME(nochiel) Different exchanges return candle data at different resolutions.
     # I need to get candle data in the lowest possible resolution then filter out the dates needed.
@@ -653,23 +658,23 @@ async def get_candles_at_dates(
 
     if ccxt_exchange.timeframes:
         if '1h' in ccxt_exchange.timeframes:
-            timeframe   = '1h' 
+            timeframe   = '1h'
 
         elif '30m' in ccxt_exchange.timeframes:
             timeframe = '30m'
 
-    candles_found: tuple[list[Candle] | None] 
-    args = [dict(exchange = ccxt_exchange, 
+    candles_found: tuple[list[Candle] | None]
+    args = [dict(exchange = ccxt_exchange,
             limit = limit,
             timeframe = timeframe,
             pair = pair,
 
             since = date)
             for date in dates]
-    tasks = [asyncio.to_thread(get_history, **arg) 
+    tasks = [asyncio.to_thread(get_history, **arg)
             for arg in args]
     candles_found = await asyncio.gather(*tasks)
-    
+
     result = [candles_at[0] for candles_at in candles_found if candles_at]
     if not result:
         raise HTTPException(
