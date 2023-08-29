@@ -19,7 +19,7 @@ Users may choose to run their own local **Spotbit** server, or to connect to a h
 
 ### Features
 
-- Fetch Bitcoin prices from a set of exchanges.(See the API documentation [here](http://tmb6kcuihnpfyrxfsjgtvasthenvr43n6pcjhyml6fprgyzydvf5atyd.onion/docs))
+- Fetch Bitcoin prices from a set of exchanges.(See the API documentation [here](https://spotbit.info/docs))
 - Produce a beancount report of the transactions associated with a Bitcoin descriptor.
 - Web front-end with price data visualisation.  
 
@@ -28,7 +28,7 @@ Users may choose to run their own local **Spotbit** server, or to connect to a h
 * Spotbit depends on the [CCXT](https://github.com/ccxt/ccxt) which provides an abstraction for API access to cryptocurrency exchanges.
 
 ### Test Server
-A spotbit instance is currently running at `h6zwwkcivy2hjys6xpinlnz2f74dsmvltzsd4xb42vinhlcaoe7fdeqd.onion`. This instance is on a dedicated Blockchain Commons server.
+A spotbit instance is currently running at <http://r5sru63gzyrnaayaua2ydo32f4hf6vd33bq6qmtktx3wjoib2cwi2gqd.onion>. This instance is on a dedicated Blockchain Commons server.
 
 ### Related Projects
 
